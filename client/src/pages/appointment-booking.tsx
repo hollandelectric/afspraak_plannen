@@ -66,6 +66,14 @@ export default function AppointmentBooking() {
     }
   };
 
+  const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setCustomerData(prev => ({ ...prev, name: e.target.value }));
+  };
+
+  const handleLocationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setCustomerData(prev => ({ ...prev, location: e.target.value }));
+  };
+
   const handleVerificationSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -79,6 +87,11 @@ export default function AppointmentBooking() {
     if (verificationCode.length === 6) {
       setCurrentStep(3);
     }
+  };
+
+  const handleVerificationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setVerificationCode(e.target.value);
+    setVerificationError(false);
   };
 
   const handleTimeSlotSelect = (timeSlot: TimeSlot) => {
@@ -151,7 +164,7 @@ export default function AppointmentBooking() {
               type="text"
               placeholder="Voer je volledige naam in"
               value={customerData.name}
-              onChange={(e) => setCustomerData(prev => ({ ...prev, name: e.target.value }))}
+              onChange={handleNameChange}
               className="shadow-soft rounded-xl border-gray-200 focus:ring-2 focus:ring-primary focus:border-primary h-12"
               required
             />
@@ -166,7 +179,7 @@ export default function AppointmentBooking() {
               type="text"
               placeholder="Bijv. Amsterdam, Utrecht"
               value={customerData.location}
-              onChange={(e) => setCustomerData(prev => ({ ...prev, location: e.target.value }))}
+              onChange={handleLocationChange}
               className="shadow-soft rounded-xl border-gray-200 focus:ring-2 focus:ring-primary focus:border-primary h-12"
               required
             />
@@ -206,10 +219,7 @@ export default function AppointmentBooking() {
               placeholder="123456"
               maxLength={6}
               value={verificationCode}
-              onChange={(e) => {
-                setVerificationCode(e.target.value);
-                setVerificationError(false);
-              }}
+              onChange={handleVerificationChange}
               className="shadow-soft rounded-xl border-gray-200 focus:ring-2 focus:ring-primary focus:border-primary h-16 text-center text-2xl font-mono tracking-widest"
               required
             />
