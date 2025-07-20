@@ -9,8 +9,9 @@ import { cn } from "@/lib/utils";
 import logoPath from "@assets/HollandElectric-logo.png (1)_1753019272215.webp";
 
 interface CustomerData {
-  name: string;
-  location: string;
+  email: string;
+  name?: string;
+  location?: string;
   address?: string;
   phoneNumber?: string;
 }
@@ -123,39 +124,22 @@ const Step1CustomerDetails = ({
   <Card className="shadow-medium border-gray-100">
     <CardContent className="p-8">
       <div className="text-center mb-8">
-        <h2 className="text-2xl font-bold text-foreground mb-2">Klantgegevens</h2>
-        <p className="text-muted-foreground">Vul je gegevens in om een afspraak in te plannen</p>
+        <h2 className="text-2xl font-bold text-foreground mb-2">Email adres</h2>
+        <p className="text-muted-foreground">Vul je email adres in om een afspraak in te plannen</p>
       </div>
       
       <form onSubmit={handleCustomerSubmit} className="space-y-6">
         <div>
-          <Label htmlFor="name" className="text-sm font-semibold text-foreground mb-2 block">
-            Naam
+          <Label htmlFor="email" className="text-sm font-semibold text-foreground mb-2 block">
+            Email adres
           </Label>
           <Input
-            id="name"
-            type="text"
-            placeholder="Voer je volledige naam in"
-            value={customerData.name}
+            id="email"
+            type="email"
+            placeholder="bijv. naam@email.com"
+            value={customerData.email}
             onChange={(e) => {
-              setCustomerData(prev => ({ ...prev, name: e.target.value }));
-            }}
-            className="shadow-soft rounded-xl border-gray-200 focus:ring-2 focus:ring-primary focus:border-primary h-12"
-            required
-          />
-        </div>
-        
-        <div>
-          <Label htmlFor="location" className="text-sm font-semibold text-foreground mb-2 block">
-            Plaats
-          </Label>
-          <Input
-            id="location"
-            type="text"
-            placeholder="Bijv. Amsterdam, Utrecht"
-            value={customerData.location}
-            onChange={(e) => {
-              setCustomerData(prev => ({ ...prev, location: e.target.value }));
+              setCustomerData(prev => ({ ...prev, email: e.target.value }));
             }}
             className="shadow-soft rounded-xl border-gray-200 focus:ring-2 focus:ring-primary focus:border-primary h-12"
             required
@@ -383,11 +367,45 @@ const Step4AddressVerification = ({
   <Card className="shadow-medium border-gray-100">
     <CardContent className="p-8">
       <div className="text-center mb-8">
-        <h2 className="text-2xl font-bold text-foreground mb-2">Adres verificatie</h2>
-        <p className="text-muted-foreground">Vul je complete adres in voor de afspraak</p>
+        <h2 className="text-2xl font-bold text-foreground mb-2">Volledige gegevens</h2>
+        <p className="text-muted-foreground">Vul je complete gegevens in voor de afspraak</p>
       </div>
       
       <form onSubmit={handleAddressSubmit} className="space-y-6">
+        <div>
+          <Label htmlFor="name" className="text-sm font-semibold text-foreground mb-2 block">
+            Volledige naam
+          </Label>
+          <Input
+            id="name"
+            type="text"
+            placeholder="Voer je volledige naam in"
+            value={customerData.name || ""}
+            onChange={(e) => {
+              setCustomerData(prev => ({ ...prev, name: e.target.value }));
+            }}
+            className="shadow-soft rounded-xl border-gray-200 focus:ring-2 focus:ring-primary focus:border-primary h-12"
+            required
+          />
+        </div>
+        
+        <div>
+          <Label htmlFor="phone" className="text-sm font-semibold text-foreground mb-2 block">
+            Telefoonnummer
+          </Label>
+          <Input
+            id="phone"
+            type="tel"
+            placeholder="Bijv. 06-12345678"
+            value={customerData.phoneNumber || ""}
+            onChange={(e) => {
+              setCustomerData(prev => ({ ...prev, phoneNumber: e.target.value }));
+            }}
+            className="shadow-soft rounded-xl border-gray-200 focus:ring-2 focus:ring-primary focus:border-primary h-12"
+            required
+          />
+        </div>
+        
         <div>
           <Label htmlFor="address" className="text-sm font-semibold text-foreground mb-2 block">
             Volledig adres
@@ -406,16 +424,16 @@ const Step4AddressVerification = ({
         </div>
         
         <div>
-          <Label htmlFor="phone" className="text-sm font-semibold text-foreground mb-2 block">
-            Telefoonnummer
+          <Label htmlFor="location" className="text-sm font-semibold text-foreground mb-2 block">
+            Plaats/Regio
           </Label>
           <Input
-            id="phone"
-            type="tel"
-            placeholder="Bijv. 06-12345678"
-            value={customerData.phoneNumber || ""}
+            id="location"
+            type="text"
+            placeholder="Bijv. Amsterdam, Utrecht"
+            value={customerData.location || ""}
             onChange={(e) => {
-              setCustomerData(prev => ({ ...prev, phoneNumber: e.target.value }));
+              setCustomerData(prev => ({ ...prev, location: e.target.value }));
             }}
             className="shadow-soft rounded-xl border-gray-200 focus:ring-2 focus:ring-primary focus:border-primary h-12"
             required
@@ -468,6 +486,10 @@ const ConfirmationScreen = ({
             <span className="font-medium text-foreground">{customerData.name}</span>
           </div>
           <div className="flex justify-between">
+            <span className="text-muted-foreground">Email:</span>
+            <span className="font-medium text-foreground">{customerData.email}</span>
+          </div>
+          <div className="flex justify-between">
             <span className="text-muted-foreground">Telefoonnummer:</span>
             <span className="font-medium text-foreground">{customerData.phoneNumber}</span>
           </div>
@@ -500,7 +522,13 @@ const ConfirmationScreen = ({
 
 export default function AppointmentBooking() {
   const [currentStep, setCurrentStep] = useState(1);
-  const [customerData, setCustomerData] = useState<CustomerData>({ name: "", location: "" });
+  const [customerData, setCustomerData] = useState<CustomerData>({ 
+    email: "",
+    name: "",
+    location: "",
+    address: "",
+    phoneNumber: ""
+  });
   const [verificationCode, setVerificationCode] = useState("");
   const [verificationError, setVerificationError] = useState(false);
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<TimeSlot | null>(null);
@@ -508,7 +536,7 @@ export default function AppointmentBooking() {
 
   const handleCustomerSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (customerData.name.trim() && customerData.location.trim()) {
+    if (customerData.email.trim()) {
       setCurrentStep(2);
     }
   };
@@ -540,14 +568,20 @@ export default function AppointmentBooking() {
 
   const handleAddressSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (customerData.address?.trim() && customerData.phoneNumber?.trim()) {
+    if (customerData.name?.trim() && customerData.phoneNumber?.trim() && customerData.address?.trim() && customerData.location?.trim()) {
       setCurrentStep(5);
     }
   };
 
   const handleReset = () => {
     setCurrentStep(1);
-    setCustomerData({ name: "", location: "" });
+    setCustomerData({ 
+      email: "",
+      name: "",
+      location: "",
+      address: "",
+      phoneNumber: ""
+    });
     setVerificationCode("");
     setVerificationError(false);
     setSelectedTimeSlot(null);
