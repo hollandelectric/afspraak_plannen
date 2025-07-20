@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Check, AlertCircle } from "lucide-react";
+import { Check, AlertCircle, ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import logoPath from "@assets/HollandElectric-logo.png (1)_1753019272215.webp";
 
@@ -18,40 +18,53 @@ interface TimeSlot {
   date: string;
   time: string;
   dayName: string;
+  weekNumber: number;
+  fullDate: Date;
 }
 
-const mockTimeSlots: TimeSlot[] = [
-  {
-    id: 1,
-    date: "21 jul",
-    time: "09:00",
-    dayName: "Maandag"
-  },
-  {
-    id: 2,
-    date: "21 jul", 
-    time: "14:30",
-    dayName: "Maandag"
-  },
-  {
-    id: 3,
-    date: "22 jul",
-    time: "11:00", 
-    dayName: "Dinsdag"
-  },
-  {
-    id: 4,
-    date: "23 jul",
-    time: "16:00",
-    dayName: "Woensdag"
-  },
-  {
-    id: 5,
-    date: "24 jul",
-    time: "10:30",
-    dayName: "Donderdag"
+// Generate time slots for 3 weeks
+const generateTimeSlots = (): TimeSlot[] => {
+  const timeSlots: TimeSlot[] = [];
+  const today = new Date();
+  const startDate = new Date(today);
+  startDate.setDate(today.getDate() + 1); // Start from tomorrow
+  
+  const availableTimes = ["09:00", "10:30", "11:00", "14:30", "16:00"];
+  const dayNames = ["Zondag", "Maandag", "Dinsdag", "Woensdag", "Donderdag", "Vrijdag", "Zaterdag"];
+  const months = ["jan", "feb", "mrt", "apr", "mei", "jun", "jul", "aug", "sep", "okt", "nov", "dec"];
+  
+  let id = 1;
+  
+  // Generate slots for 3 weeks (21 days)
+  for (let week = 0; week < 3; week++) {
+    for (let day = 0; day < 7; day++) {
+      const currentDate = new Date(startDate);
+      currentDate.setDate(startDate.getDate() + (week * 7) + day);
+      
+      // Skip weekends for appointments
+      if (currentDate.getDay() === 0 || currentDate.getDay() === 6) continue;
+      
+      // Generate 2-3 random time slots per day
+      const numSlots = Math.floor(Math.random() * 2) + 2; // 2-3 slots
+      const shuffledTimes = [...availableTimes].sort(() => 0.5 - Math.random()).slice(0, numSlots);
+      
+      shuffledTimes.forEach(time => {
+        timeSlots.push({
+          id: id++,
+          date: `${currentDate.getDate()} ${months[currentDate.getMonth()]}`,
+          time: time,
+          dayName: dayNames[currentDate.getDay()],
+          weekNumber: week + 1,
+          fullDate: new Date(currentDate)
+        });
+      });
+    }
   }
-];
+  
+  return timeSlots.sort((a, b) => a.fullDate.getTime() - b.fullDate.getTime());
+};
+
+const allTimeSlots = generateTimeSlots();
 
 const ProgressIndicator = ({ currentStep }: { currentStep: number }) => (
   <div className="text-center mb-8">
@@ -226,72 +239,126 @@ const Step2Verification = ({
 const Step3AppointmentSelection = ({ 
   selectedTimeSlot, 
   handleTimeSlotSelect, 
-  handleConfirmAppointment 
+  handleConfirmAppointment,
+  currentWeek,
+  setCurrentWeek
 }: {
   selectedTimeSlot: TimeSlot | null;
   handleTimeSlotSelect: (timeSlot: TimeSlot) => void;
   handleConfirmAppointment: () => void;
-}) => (
-  <Card className="shadow-medium border-gray-100">
-    <CardContent className="p-8">
-      <div className="text-center mb-8">
-        <h2 className="text-2xl font-bold text-foreground mb-2">Beschikbare tijden</h2>
-        <p className="text-muted-foreground">Kies een datum en tijd die het beste uitkomt</p>
-      </div>
-      
-      <div className="space-y-3 mb-6">
-        {mockTimeSlots.map((timeSlot) => (
-          <div
-            key={timeSlot.id}
-            onClick={() => handleTimeSlotSelect(timeSlot)}
-            className={cn(
-              "border rounded-xl p-4 transition-all duration-200 cursor-pointer shadow-soft hover:shadow-medium",
-              selectedTimeSlot?.id === timeSlot.id
-                ? "border-primary bg-amber-50 ring-2 ring-primary/20"
-                : "border-gray-200 hover:border-primary/50 hover:bg-amber-50/30"
-            )}
+  currentWeek: number;
+  setCurrentWeek: (week: number) => void;
+}) => {
+  const currentWeekSlots = allTimeSlots.filter(slot => slot.weekNumber === currentWeek);
+  
+  const getWeekDateRange = (weekNumber: number) => {
+    const weekSlots = allTimeSlots.filter(slot => slot.weekNumber === weekNumber);
+    if (weekSlots.length === 0) return "";
+    
+    const firstSlot = weekSlots[0];
+    const lastSlot = weekSlots[weekSlots.length - 1];
+    return `${firstSlot.date} - ${lastSlot.date}`;
+  };
+
+  return (
+    <Card className="shadow-medium border-gray-100">
+      <CardContent className="p-8">
+        <div className="text-center mb-8">
+          <h2 className="text-2xl font-bold text-foreground mb-2">Beschikbare tijden</h2>
+          <p className="text-muted-foreground">Kies een datum en tijd die het beste uitkomt</p>
+        </div>
+        
+        {/* Week Navigation */}
+        <div className="flex items-center justify-between mb-6 bg-gray-50 rounded-xl p-4">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setCurrentWeek(Math.max(1, currentWeek - 1))}
+            disabled={currentWeek === 1}
+            className="flex items-center space-x-2 hover:bg-white"
           >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
-                <div className="text-center min-w-[60px]">
-                  <p className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
-                    {timeSlot.dayName.slice(0, 3)}
-                  </p>
-                  <p className="text-lg font-bold text-foreground">
-                    {timeSlot.date}
-                  </p>
-                </div>
-                <div className="h-8 w-px bg-gray-200"></div>
-                <div>
-                  <p className="text-xl font-bold text-foreground">{timeSlot.time}</p>
-                  <p className="text-sm text-muted-foreground">{timeSlot.dayName}</p>
-                </div>
-              </div>
-              <div className="w-6 h-6 rounded-full border-2 border-gray-300 flex items-center justify-center">
-                {selectedTimeSlot?.id === timeSlot.id && (
-                  <div className="w-3 h-3 rounded-full bg-primary"></div>
-                )}
-              </div>
-            </div>
+            <ChevronLeft className="w-4 h-4" />
+            <span>Vorige week</span>
+          </Button>
+          
+          <div className="text-center">
+            <p className="text-sm font-medium text-muted-foreground">Week {currentWeek}</p>
+            <p className="text-xs text-muted-foreground">{getWeekDateRange(currentWeek)}</p>
           </div>
-        ))}
-      </div>
-      
-      <Button 
-        onClick={handleConfirmAppointment}
-        disabled={!selectedTimeSlot}
-        className={cn(
-          "w-full h-14 rounded-xl text-lg font-semibold transition-all duration-200",
-          selectedTimeSlot 
-            ? "shadow-medium hover:shadow-large hover:-translate-y-0.5" 
-            : "bg-gray-300 text-gray-500 cursor-not-allowed hover:bg-gray-300 hover:translate-y-0"
-        )}
-      >
-        Bevestig afspraak
-      </Button>
-    </CardContent>
-  </Card>
-);
+          
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setCurrentWeek(Math.min(3, currentWeek + 1))}
+            disabled={currentWeek === 3}
+            className="flex items-center space-x-2 hover:bg-white"
+          >
+            <span>Volgende week</span>
+            <ChevronRight className="w-4 h-4" />
+          </Button>
+        </div>
+        
+        {/* Time Slots */}
+        <div className="space-y-3 mb-6 max-h-96 overflow-y-auto">
+          {currentWeekSlots.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-muted-foreground">Geen beschikbare tijden deze week</p>
+            </div>
+          ) : (
+            currentWeekSlots.map((timeSlot) => (
+              <div
+                key={timeSlot.id}
+                onClick={() => handleTimeSlotSelect(timeSlot)}
+                className={cn(
+                  "border rounded-xl p-4 transition-all duration-200 cursor-pointer shadow-soft hover:shadow-medium",
+                  selectedTimeSlot?.id === timeSlot.id
+                    ? "border-primary bg-amber-50 ring-2 ring-primary/20"
+                    : "border-gray-200 hover:border-primary/50 hover:bg-amber-50/30"
+                )}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-4">
+                    <div className="text-center min-w-[60px]">
+                      <p className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+                        {timeSlot.dayName.slice(0, 3)}
+                      </p>
+                      <p className="text-lg font-bold text-foreground">
+                        {timeSlot.date}
+                      </p>
+                    </div>
+                    <div className="h-8 w-px bg-gray-200"></div>
+                    <div>
+                      <p className="text-xl font-bold text-foreground">{timeSlot.time}</p>
+                      <p className="text-sm text-muted-foreground">{timeSlot.dayName}</p>
+                    </div>
+                  </div>
+                  <div className="w-6 h-6 rounded-full border-2 border-gray-300 flex items-center justify-center">
+                    {selectedTimeSlot?.id === timeSlot.id && (
+                      <div className="w-3 h-3 rounded-full bg-primary"></div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+        
+        <Button 
+          onClick={handleConfirmAppointment}
+          disabled={!selectedTimeSlot}
+          className={cn(
+            "w-full h-14 rounded-xl text-lg font-semibold transition-all duration-200",
+            selectedTimeSlot 
+              ? "shadow-medium hover:shadow-large hover:-translate-y-0.5" 
+              : "bg-gray-300 text-gray-500 cursor-not-allowed hover:bg-gray-300 hover:translate-y-0"
+          )}
+        >
+          Bevestig afspraak
+        </Button>
+      </CardContent>
+    </Card>
+  );
+};
 
 const ConfirmationScreen = ({ 
   selectedTimeSlot, 
@@ -350,6 +417,7 @@ export default function AppointmentBooking() {
   const [verificationCode, setVerificationCode] = useState("");
   const [verificationError, setVerificationError] = useState(false);
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<TimeSlot | null>(null);
+  const [currentWeek, setCurrentWeek] = useState(1);
 
   const handleCustomerSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -389,6 +457,7 @@ export default function AppointmentBooking() {
     setVerificationCode("");
     setVerificationError(false);
     setSelectedTimeSlot(null);
+    setCurrentWeek(1);
   };
 
   return (
@@ -427,6 +496,8 @@ export default function AppointmentBooking() {
             selectedTimeSlot={selectedTimeSlot}
             handleTimeSlotSelect={handleTimeSlotSelect}
             handleConfirmAppointment={handleConfirmAppointment}
+            currentWeek={currentWeek}
+            setCurrentWeek={setCurrentWeek}
           />
         )}
         {currentStep === 4 && (
