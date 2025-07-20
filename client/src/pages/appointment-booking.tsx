@@ -215,11 +215,11 @@ const Step2Verification = ({
         <div className="flex gap-3">
           <Button 
             type="button"
-            variant="outline"
+            variant="ghost"
             onClick={onGoBack}
-            className="h-14 rounded-xl text-lg font-semibold flex-1 shadow-medium hover:shadow-large transition-all duration-200 hover:-translate-y-0.5"
+            className="h-14 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-gray-50 transition-all duration-200"
           >
-            Vorige
+            ← Vorige
           </Button>
           <Button 
             type="submit"
@@ -349,14 +349,14 @@ const Step3AppointmentSelection = ({
           )}
         </div>
         
-        <div className="flex gap-3">
+        <div className="flex gap-3 items-center">
           <Button 
             type="button"
-            variant="outline"
+            variant="ghost"
             onClick={onGoBack}
-            className="h-14 rounded-xl text-lg font-semibold flex-1 shadow-medium hover:shadow-large transition-all duration-200 hover:-translate-y-0.5"
+            className="h-14 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-gray-50 transition-all duration-200"
           >
-            Vorige
+            ← Vorige
           </Button>
           <Button 
             onClick={handleConfirmAppointment}
@@ -446,14 +446,14 @@ const Step4AddressVerification = ({
           />
         </div>
         
-        <div className="flex gap-3">
+        <div className="flex gap-3 items-center">
           <Button 
             type="button"
-            variant="outline"
+            variant="ghost"
             onClick={onGoBack}
-            className="h-14 rounded-xl text-lg font-semibold flex-1 shadow-medium hover:shadow-large transition-all duration-200 hover:-translate-y-0.5"
+            className="h-14 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-gray-50 transition-all duration-200"
           >
-            Vorige
+            ← Vorige
           </Button>
           <Button 
             type="submit"
