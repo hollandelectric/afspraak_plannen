@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Check, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import logoPath from "@assets/HollandElectric-logo.png (1)_1753019272215.webp";
 
 interface CustomerData {
   name: string;
@@ -271,8 +272,8 @@ export default function AppointmentBooking() {
               className={cn(
                 "border rounded-xl p-4 transition-all duration-200 cursor-pointer shadow-soft hover:shadow-medium",
                 selectedTimeSlot?.id === timeSlot.id
-                  ? "border-primary bg-blue-50 ring-2 ring-primary/20"
-                  : "border-gray-200 hover:border-primary/50 hover:bg-gray-50"
+                  ? "border-primary bg-amber-50 ring-2 ring-primary/20"
+                  : "border-gray-200 hover:border-primary/50 hover:bg-amber-50/30"
               )}
             >
               <div className="flex items-center justify-between">
@@ -321,7 +322,7 @@ export default function AppointmentBooking() {
     <Card className="shadow-medium border-gray-100">
       <CardContent className="p-8 text-center">
         <div className="mb-8">
-          <div className="w-20 h-20 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-6 shadow-large">
+          <div className="w-20 h-20 bg-primary rounded-full flex items-center justify-center mx-auto mb-6 shadow-large">
             <Check className="w-10 h-10 text-white" />
           </div>
           <h2 className="text-2xl font-bold text-foreground mb-4">Bedankt, je afspraak is ingepland!</h2>
@@ -361,14 +362,30 @@ export default function AppointmentBooking() {
   );
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gradient-to-br from-amber-50 to-green-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
+        <div className="text-center mb-8">
+          <img 
+            src={logoPath} 
+            alt="Holland Electric Logo" 
+            className="mx-auto h-16 w-auto mb-4"
+          />
+          <h1 className="text-3xl font-bold text-foreground">Afspraak inplannen</h1>
+          <p className="text-muted-foreground mt-2">Plan eenvoudig een afspraak met onze elektriciens</p>
+        </div>
+        
         <ProgressIndicator />
         
         {currentStep === 1 && <Step1CustomerDetails />}
         {currentStep === 2 && <Step2Verification />}
         {currentStep === 3 && <Step3AppointmentSelection />}
         {currentStep === 4 && <ConfirmationScreen />}
+        
+        <div className="text-center mt-8">
+          <p className="text-sm text-muted-foreground">
+            © 2024 Holland Electric - Betrouwbare elektriciens
+          </p>
+        </div>
       </div>
     </div>
   );
