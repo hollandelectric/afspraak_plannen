@@ -480,18 +480,11 @@ const ConfirmationScreen = ({
         </div>
       </div>
       
-      <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6">
+      <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
         <p className="text-sm text-amber-800">
           <strong>Belangrijk:</strong> Onze elektricien zal 15 minuten voor de afspraak contact opnemen via WhatsApp.
         </p>
       </div>
-      
-      <Button 
-        onClick={handleReset}
-        className="w-full h-14 rounded-xl text-lg font-semibold shadow-medium hover:shadow-large transition-all duration-200 hover:-translate-y-0.5"
-      >
-        Nieuwe afspraak plannen
-      </Button>
     </CardContent>
   </Card>
 );
