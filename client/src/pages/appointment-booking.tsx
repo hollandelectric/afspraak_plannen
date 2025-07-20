@@ -11,6 +11,8 @@ import logoPath from "@assets/HollandElectric-logo.png (1)_1753019272215.webp";
 interface CustomerData {
   name: string;
   location: string;
+  address?: string;
+  phoneNumber?: string;
 }
 
 interface TimeSlot {
@@ -68,34 +70,43 @@ const allTimeSlots = generateTimeSlots();
 
 const ProgressIndicator = ({ currentStep }: { currentStep: number }) => (
   <div className="text-center mb-8">
-    <div className="flex items-center justify-center space-x-4 mb-6">
+    <div className="flex items-center justify-center space-x-2 mb-6">
       <div className="flex items-center">
         <div className={cn(
-          "w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold shadow-soft transition-colors",
+          "w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold shadow-soft transition-colors",
           currentStep >= 1 ? "bg-primary text-primary-foreground" : "bg-gray-200 text-gray-500"
         )}>
           1
         </div>
-        <div className="w-16 h-0.5 bg-gray-200 ml-4"></div>
+        <div className="w-12 h-0.5 bg-gray-200 ml-2"></div>
       </div>
       <div className="flex items-center">
         <div className={cn(
-          "w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold transition-colors",
+          "w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold transition-colors",
           currentStep >= 2 ? "bg-primary text-primary-foreground" : "bg-gray-200 text-gray-500"
         )}>
           2
         </div>
-        <div className="w-16 h-0.5 bg-gray-200 ml-4"></div>
+        <div className="w-12 h-0.5 bg-gray-200 ml-2"></div>
+      </div>
+      <div className="flex items-center">
+        <div className={cn(
+          "w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold transition-colors",
+          currentStep >= 3 ? "bg-primary text-primary-foreground" : "bg-gray-200 text-gray-500"
+        )}>
+          3
+        </div>
+        <div className="w-12 h-0.5 bg-gray-200 ml-2"></div>
       </div>
       <div className={cn(
-        "w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold transition-colors",
-        currentStep >= 3 ? "bg-primary text-primary-foreground" : "bg-gray-200 text-gray-500"
+        "w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold transition-colors",
+        currentStep >= 4 ? "bg-primary text-primary-foreground" : "bg-gray-200 text-gray-500"
       )}>
-        3
+        4
       </div>
     </div>
     <p className="text-sm text-muted-foreground font-medium">
-      {currentStep <= 3 ? `Stap ${currentStep} van 3` : "Voltooid"}
+      {currentStep <= 4 ? `Stap ${currentStep} van 4` : "Voltooid"}
     </p>
   </div>
 );
@@ -360,6 +371,68 @@ const Step3AppointmentSelection = ({
   );
 };
 
+const Step4AddressVerification = ({ 
+  customerData, 
+  setCustomerData, 
+  handleAddressSubmit 
+}: {
+  customerData: CustomerData;
+  setCustomerData: React.Dispatch<React.SetStateAction<CustomerData>>;
+  handleAddressSubmit: (e: React.FormEvent) => void;
+}) => (
+  <Card className="shadow-medium border-gray-100">
+    <CardContent className="p-8">
+      <div className="text-center mb-8">
+        <h2 className="text-2xl font-bold text-foreground mb-2">Adres verificatie</h2>
+        <p className="text-muted-foreground">Vul je complete adres in voor de afspraak</p>
+      </div>
+      
+      <form onSubmit={handleAddressSubmit} className="space-y-6">
+        <div>
+          <Label htmlFor="address" className="text-sm font-semibold text-foreground mb-2 block">
+            Volledig adres
+          </Label>
+          <Input
+            id="address"
+            type="text"
+            placeholder="Bijv. Hoofdstraat 123, 1234 AB Amsterdam"
+            value={customerData.address || ""}
+            onChange={(e) => {
+              setCustomerData(prev => ({ ...prev, address: e.target.value }));
+            }}
+            className="shadow-soft rounded-xl border-gray-200 focus:ring-2 focus:ring-primary focus:border-primary h-12"
+            required
+          />
+        </div>
+        
+        <div>
+          <Label htmlFor="phone" className="text-sm font-semibold text-foreground mb-2 block">
+            Telefoonnummer
+          </Label>
+          <Input
+            id="phone"
+            type="tel"
+            placeholder="Bijv. 06-12345678"
+            value={customerData.phoneNumber || ""}
+            onChange={(e) => {
+              setCustomerData(prev => ({ ...prev, phoneNumber: e.target.value }));
+            }}
+            className="shadow-soft rounded-xl border-gray-200 focus:ring-2 focus:ring-primary focus:border-primary h-12"
+            required
+          />
+        </div>
+        
+        <Button 
+          type="submit"
+          className="w-full h-14 rounded-xl text-lg font-semibold shadow-medium hover:shadow-large transition-all duration-200 hover:-translate-y-0.5"
+        >
+          Bevestig gegevens
+        </Button>
+      </form>
+    </CardContent>
+  </Card>
+);
+
 const ConfirmationScreen = ({ 
   selectedTimeSlot, 
   customerData, 
@@ -380,7 +453,7 @@ const ConfirmationScreen = ({
       </div>
       
       <div className="bg-gray-50 rounded-xl p-6 mb-6">
-        <h3 className="font-semibold text-foreground mb-4">Afspraak Details</h3>
+        <h3 className="font-semibold text-foreground mb-4">Volledige afspraak overzicht</h3>
         <div className="space-y-3 text-sm">
           <div className="flex justify-between">
             <span className="text-muted-foreground">Datum:</span>
@@ -395,10 +468,24 @@ const ConfirmationScreen = ({
             <span className="font-medium text-foreground">{customerData.name}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-muted-foreground">Locatie:</span>
+            <span className="text-muted-foreground">Telefoonnummer:</span>
+            <span className="font-medium text-foreground">{customerData.phoneNumber}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Adres:</span>
+            <span className="font-medium text-foreground">{customerData.address}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Regio:</span>
             <span className="font-medium text-foreground">{customerData.location}</span>
           </div>
         </div>
+      </div>
+      
+      <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6">
+        <p className="text-sm text-amber-800">
+          <strong>Belangrijk:</strong> Onze elektricien zal 15 minuten voor de afspraak contact opnemen via WhatsApp.
+        </p>
       </div>
       
       <Button 
@@ -448,6 +535,13 @@ export default function AppointmentBooking() {
   const handleConfirmAppointment = () => {
     if (selectedTimeSlot) {
       setCurrentStep(4);
+    }
+  };
+
+  const handleAddressSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (customerData.address?.trim() && customerData.phoneNumber?.trim()) {
+      setCurrentStep(5);
     }
   };
 
@@ -501,6 +595,13 @@ export default function AppointmentBooking() {
           />
         )}
         {currentStep === 4 && (
+          <Step4AddressVerification 
+            customerData={customerData}
+            setCustomerData={setCustomerData}
+            handleAddressSubmit={handleAddressSubmit}
+          />
+        )}
+        {currentStep === 5 && (
           <ConfirmationScreen 
             selectedTimeSlot={selectedTimeSlot}
             customerData={customerData}
