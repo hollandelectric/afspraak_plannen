@@ -482,7 +482,7 @@ const ConfirmationScreen = ({
       
       <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
         <p className="text-sm text-amber-800">
-          <strong>Belangrijk:</strong> Onze elektricien zal 15 minuten voor de afspraak contact opnemen via WhatsApp.
+          <strong>Belangrijk:</strong> Onze elektricien zal voor de afspraak contact opnemen.
         </p>
       </div>
     </CardContent>
