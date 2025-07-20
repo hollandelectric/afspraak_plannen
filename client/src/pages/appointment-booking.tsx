@@ -166,13 +166,15 @@ const Step2Verification = ({
   setVerificationCode, 
   verificationError, 
   setVerificationError, 
-  handleVerificationSubmit 
+  handleVerificationSubmit,
+  onGoBack
 }: {
   verificationCode: string;
   setVerificationCode: React.Dispatch<React.SetStateAction<string>>;
   verificationError: boolean;
   setVerificationError: React.Dispatch<React.SetStateAction<boolean>>;
   handleVerificationSubmit: (e: React.FormEvent) => void;
+  onGoBack: () => void;
 }) => (
   <Card className="shadow-medium border-gray-100">
     <CardContent className="p-8">
@@ -210,12 +212,22 @@ const Step2Verification = ({
           </Alert>
         )}
         
-        <Button 
-          type="submit"
-          className="w-full h-14 rounded-xl text-lg font-semibold shadow-medium hover:shadow-large transition-all duration-200 hover:-translate-y-0.5"
-        >
-          Bevestig code
-        </Button>
+        <div className="flex gap-3">
+          <Button 
+            type="button"
+            variant="outline"
+            onClick={onGoBack}
+            className="h-14 rounded-xl text-lg font-semibold flex-1 shadow-medium hover:shadow-large transition-all duration-200 hover:-translate-y-0.5"
+          >
+            Vorige
+          </Button>
+          <Button 
+            type="submit"
+            className="h-14 rounded-xl text-lg font-semibold flex-1 shadow-medium hover:shadow-large transition-all duration-200 hover:-translate-y-0.5"
+          >
+            Bevestig code
+          </Button>
+        </div>
         
         <div className="text-center">
           <Button 
@@ -236,13 +248,15 @@ const Step3AppointmentSelection = ({
   handleTimeSlotSelect, 
   handleConfirmAppointment,
   currentWeek,
-  setCurrentWeek
+  setCurrentWeek,
+  onGoBack
 }: {
   selectedTimeSlot: TimeSlot | null;
   handleTimeSlotSelect: (timeSlot: TimeSlot) => void;
   handleConfirmAppointment: () => void;
   currentWeek: number;
   setCurrentWeek: (week: number) => void;
+  onGoBack: () => void;
 }) => {
   const currentWeekSlots = allTimeSlots.filter(slot => slot.weekNumber === currentWeek);
   
@@ -335,18 +349,28 @@ const Step3AppointmentSelection = ({
           )}
         </div>
         
-        <Button 
-          onClick={handleConfirmAppointment}
-          disabled={!selectedTimeSlot}
-          className={cn(
-            "w-full h-14 rounded-xl text-lg font-semibold transition-all duration-200",
-            selectedTimeSlot 
-              ? "shadow-medium hover:shadow-large hover:-translate-y-0.5" 
-              : "bg-gray-300 text-gray-500 cursor-not-allowed hover:bg-gray-300 hover:translate-y-0"
-          )}
-        >
-          Bevestig afspraak
-        </Button>
+        <div className="flex gap-3">
+          <Button 
+            type="button"
+            variant="outline"
+            onClick={onGoBack}
+            className="h-14 rounded-xl text-lg font-semibold flex-1 shadow-medium hover:shadow-large transition-all duration-200 hover:-translate-y-0.5"
+          >
+            Vorige
+          </Button>
+          <Button 
+            onClick={handleConfirmAppointment}
+            disabled={!selectedTimeSlot}
+            className={cn(
+              "h-14 rounded-xl text-lg font-semibold flex-1 transition-all duration-200",
+              selectedTimeSlot 
+                ? "shadow-medium hover:shadow-large hover:-translate-y-0.5" 
+                : "bg-gray-300 text-gray-500 cursor-not-allowed hover:bg-gray-300 hover:translate-y-0"
+            )}
+          >
+            Bevestig afspraak
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );
@@ -355,11 +379,13 @@ const Step3AppointmentSelection = ({
 const Step4AddressVerification = ({ 
   customerData, 
   setCustomerData, 
-  handleAddressSubmit 
+  handleAddressSubmit,
+  onGoBack
 }: {
   customerData: CustomerData;
   setCustomerData: React.Dispatch<React.SetStateAction<CustomerData>>;
   handleAddressSubmit: (e: React.FormEvent) => void;
+  onGoBack: () => void;
 }) => (
   <Card className="shadow-medium border-gray-100">
     <CardContent className="p-8">
@@ -420,12 +446,22 @@ const Step4AddressVerification = ({
           />
         </div>
         
-        <Button 
-          type="submit"
-          className="w-full h-14 rounded-xl text-lg font-semibold shadow-medium hover:shadow-large transition-all duration-200 hover:-translate-y-0.5"
-        >
-          Bevestig adres
-        </Button>
+        <div className="flex gap-3">
+          <Button 
+            type="button"
+            variant="outline"
+            onClick={onGoBack}
+            className="h-14 rounded-xl text-lg font-semibold flex-1 shadow-medium hover:shadow-large transition-all duration-200 hover:-translate-y-0.5"
+          >
+            Vorige
+          </Button>
+          <Button 
+            type="submit"
+            className="h-14 rounded-xl text-lg font-semibold flex-1 shadow-medium hover:shadow-large transition-all duration-200 hover:-translate-y-0.5"
+          >
+            Bevestig gegevens
+          </Button>
+        </div>
       </form>
     </CardContent>
   </Card>
@@ -557,6 +593,12 @@ export default function AppointmentBooking() {
     setCurrentWeek(1);
   };
 
+  const handleGoBack = () => {
+    if (currentStep > 1) {
+      setCurrentStep(currentStep - 1);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-50 to-green-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
@@ -586,6 +628,7 @@ export default function AppointmentBooking() {
             verificationError={verificationError}
             setVerificationError={setVerificationError}
             handleVerificationSubmit={handleVerificationSubmit}
+            onGoBack={handleGoBack}
           />
         )}
         {currentStep === 3 && (
@@ -595,6 +638,7 @@ export default function AppointmentBooking() {
             handleConfirmAppointment={handleConfirmAppointment}
             currentWeek={currentWeek}
             setCurrentWeek={setCurrentWeek}
+            onGoBack={handleGoBack}
           />
         )}
         {currentStep === 4 && (
@@ -602,6 +646,7 @@ export default function AppointmentBooking() {
             customerData={customerData}
             setCustomerData={setCustomerData}
             handleAddressSubmit={handleAddressSubmit}
+            onGoBack={handleGoBack}
           />
         )}
         {currentStep === 5 && (
