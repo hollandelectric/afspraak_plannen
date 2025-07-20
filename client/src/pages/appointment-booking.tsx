@@ -169,7 +169,9 @@ export default function AppointmentBooking() {
               type="text"
               placeholder="Bijv. Amsterdam, Utrecht"
               value={customerData.location}
-              onChange={handleLocationChange}
+              onChange={(e) => {
+                setCustomerData(prev => ({ ...prev, location: e.target.value }));
+              }}
               className="shadow-soft rounded-xl border-gray-200 focus:ring-2 focus:ring-primary focus:border-primary h-12"
               required
             />
@@ -209,7 +211,10 @@ export default function AppointmentBooking() {
               placeholder="123456"
               maxLength={6}
               value={verificationCode}
-              onChange={handleVerificationChange}
+              onChange={(e) => {
+                setVerificationCode(e.target.value);
+                setVerificationError(false);
+              }}
               className="shadow-soft rounded-xl border-gray-200 focus:ring-2 focus:ring-primary focus:border-primary h-16 text-center text-2xl font-mono tracking-widest"
               required
             />
