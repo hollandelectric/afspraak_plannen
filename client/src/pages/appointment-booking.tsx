@@ -364,53 +364,19 @@ const Step4AddressVerification = ({
   <Card className="shadow-medium border-gray-100">
     <CardContent className="p-8">
       <div className="text-center mb-8">
-        <h2 className="text-2xl font-bold text-foreground mb-2">Volledige gegevens</h2>
-        <p className="text-muted-foreground">Vul je complete gegevens in voor de afspraak</p>
+        <h2 className="text-2xl font-bold text-foreground mb-2">Adresgegevens</h2>
+        <p className="text-muted-foreground">Vul je adres in voor de afspraak</p>
       </div>
       
       <form onSubmit={handleAddressSubmit} className="space-y-6">
         <div>
-          <Label htmlFor="name" className="text-sm font-semibold text-foreground mb-2 block">
-            Volledige naam
-          </Label>
-          <Input
-            id="name"
-            type="text"
-            placeholder="Voer je volledige naam in"
-            value={customerData.name || ""}
-            onChange={(e) => {
-              setCustomerData(prev => ({ ...prev, name: e.target.value }));
-            }}
-            className="shadow-soft rounded-xl border-gray-200 focus:ring-2 focus:ring-primary focus:border-primary h-12"
-            required
-          />
-        </div>
-        
-        <div>
-          <Label htmlFor="phone" className="text-sm font-semibold text-foreground mb-2 block">
-            Telefoonnummer
-          </Label>
-          <Input
-            id="phone"
-            type="tel"
-            placeholder="Bijv. 06-12345678"
-            value={customerData.phoneNumber || ""}
-            onChange={(e) => {
-              setCustomerData(prev => ({ ...prev, phoneNumber: e.target.value }));
-            }}
-            className="shadow-soft rounded-xl border-gray-200 focus:ring-2 focus:ring-primary focus:border-primary h-12"
-            required
-          />
-        </div>
-        
-        <div>
           <Label htmlFor="address" className="text-sm font-semibold text-foreground mb-2 block">
-            Volledig adres
+            Straatnaam en huisnummer
           </Label>
           <Input
             id="address"
             type="text"
-            placeholder="Bijv. Hoofdstraat 123, 1234 AB Amsterdam"
+            placeholder="Bijv. Hoofdstraat 123"
             value={customerData.address || ""}
             onChange={(e) => {
               setCustomerData(prev => ({ ...prev, address: e.target.value }));
@@ -421,13 +387,30 @@ const Step4AddressVerification = ({
         </div>
         
         <div>
+          <Label htmlFor="postcode" className="text-sm font-semibold text-foreground mb-2 block">
+            Postcode
+          </Label>
+          <Input
+            id="postcode"
+            type="text"
+            placeholder="Bijv. 1234 AB"
+            value={customerData.phoneNumber || ""}
+            onChange={(e) => {
+              setCustomerData(prev => ({ ...prev, phoneNumber: e.target.value }));
+            }}
+            className="shadow-soft rounded-xl border-gray-200 focus:ring-2 focus:ring-primary focus:border-primary h-12"
+            required
+          />
+        </div>
+        
+        <div>
           <Label htmlFor="location" className="text-sm font-semibold text-foreground mb-2 block">
-            Plaats/Regio
+            Plaats
           </Label>
           <Input
             id="location"
             type="text"
-            placeholder="Bijv. Amsterdam, Utrecht"
+            placeholder="Bijv. Amsterdam"
             value={customerData.location || ""}
             onChange={(e) => {
               setCustomerData(prev => ({ ...prev, location: e.target.value }));
@@ -441,7 +424,7 @@ const Step4AddressVerification = ({
           type="submit"
           className="w-full h-14 rounded-xl text-lg font-semibold shadow-medium hover:shadow-large transition-all duration-200 hover:-translate-y-0.5"
         >
-          Bevestig gegevens
+          Bevestig adres
         </Button>
       </form>
     </CardContent>
@@ -479,23 +462,19 @@ const ConfirmationScreen = ({
             <span className="font-medium text-foreground">{selectedTimeSlot?.time}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-muted-foreground">Naam:</span>
-            <span className="font-medium text-foreground">{customerData.name}</span>
-          </div>
-          <div className="flex justify-between">
             <span className="text-muted-foreground">Email:</span>
             <span className="font-medium text-foreground">{customerData.email}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Telefoonnummer:</span>
-            <span className="font-medium text-foreground">{customerData.phoneNumber}</span>
           </div>
           <div className="flex justify-between">
             <span className="text-muted-foreground">Adres:</span>
             <span className="font-medium text-foreground">{customerData.address}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-muted-foreground">Regio:</span>
+            <span className="text-muted-foreground">Postcode:</span>
+            <span className="font-medium text-foreground">{customerData.phoneNumber}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Plaats:</span>
             <span className="font-medium text-foreground">{customerData.location}</span>
           </div>
         </div>
@@ -565,7 +544,7 @@ export default function AppointmentBooking() {
 
   const handleAddressSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (customerData.name?.trim() && customerData.phoneNumber?.trim() && customerData.address?.trim() && customerData.location?.trim()) {
+    if (customerData.address?.trim() && customerData.phoneNumber?.trim() && customerData.location?.trim()) {
       setCurrentStep(5);
     }
   };
