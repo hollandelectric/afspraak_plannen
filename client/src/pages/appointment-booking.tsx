@@ -169,9 +169,7 @@ export default function AppointmentBooking() {
               type="text"
               placeholder="Bijv. Amsterdam, Utrecht"
               value={customerData.location}
-              onChange={(e) => {
-                setCustomerData(prev => ({ ...prev, location: e.target.value }));
-              }}
+              onChange={handleLocationChange}
               className="shadow-soft rounded-xl border-gray-200 focus:ring-2 focus:ring-primary focus:border-primary h-12"
               required
             />
@@ -359,7 +357,7 @@ export default function AppointmentBooking() {
           <img 
             src={logoPath} 
             alt="Holland Electric Logo" 
-            className="mx-auto h-16 w-auto mb-4"
+            className="mx-auto h-16 w-auto mb-8"
           />
           <h1 className="text-3xl font-bold text-foreground">Afspraak inplannen</h1>
           <p className="text-muted-foreground mt-2">Plan eenvoudig een afspraak met onze elektriciens</p>
