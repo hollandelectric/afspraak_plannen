@@ -264,21 +264,19 @@ const Step3AppointmentSelection = ({
         </div>
         
         {/* Week Navigation */}
-        <div className="flex items-center justify-between mb-6 bg-gray-50 rounded-xl p-4">
+        <div className="flex items-center justify-between mb-6">
           <Button
             variant="ghost"
             size="sm"
             onClick={() => setCurrentWeek(Math.max(1, currentWeek - 1))}
             disabled={currentWeek === 1}
-            className="flex items-center space-x-2 hover:bg-white"
+            className="h-8 w-8 p-0 hover:bg-gray-100 disabled:opacity-30"
           >
             <ChevronLeft className="w-4 h-4" />
-            <span>Vorige week</span>
           </Button>
           
           <div className="text-center">
-            <p className="text-sm font-medium text-muted-foreground">Week {currentWeek}</p>
-            <p className="text-xs text-muted-foreground">{getWeekDateRange(currentWeek)}</p>
+            <p className="text-sm font-medium text-foreground">Week {currentWeek}</p>
           </div>
           
           <Button
@@ -286,9 +284,8 @@ const Step3AppointmentSelection = ({
             size="sm"
             onClick={() => setCurrentWeek(Math.min(3, currentWeek + 1))}
             disabled={currentWeek === 3}
-            className="flex items-center space-x-2 hover:bg-white"
+            className="h-8 w-8 p-0 hover:bg-gray-100 disabled:opacity-30"
           >
-            <span>Volgende week</span>
             <ChevronRight className="w-4 h-4" />
           </Button>
         </div>
