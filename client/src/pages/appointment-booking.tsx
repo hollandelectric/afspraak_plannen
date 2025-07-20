@@ -12,35 +12,43 @@ interface CustomerData {
   location: string;
 }
 
-interface Appointment {
+interface TimeSlot {
   id: number;
+  date: string;
   time: string;
-  technician: string;
-  distance: string;
-  avatar: string;
+  dayName: string;
 }
 
-const mockAppointments: Appointment[] = [
+const mockTimeSlots: TimeSlot[] = [
   {
     id: 1,
-    time: "13:00",
-    technician: "Jan Bakker",
-    distance: "2.3 km",
-    avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=150&h=150"
+    date: "21 jul",
+    time: "09:00",
+    dayName: "Maandag"
   },
   {
     id: 2,
-    time: "15:30",
-    technician: "Peter de Vries",
-    distance: "3.1 km",
-    avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=150&h=150"
+    date: "21 jul", 
+    time: "14:30",
+    dayName: "Maandag"
   },
   {
     id: 3,
-    time: "17:00",
-    technician: "Mark Jansen",
-    distance: "4.2 km",
-    avatar: "https://images.unsplash.com/photo-1560250097-0b93528c311a?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=150&h=150"
+    date: "22 jul",
+    time: "11:00", 
+    dayName: "Dinsdag"
+  },
+  {
+    id: 4,
+    date: "23 jul",
+    time: "16:00",
+    dayName: "Woensdag"
+  },
+  {
+    id: 5,
+    date: "24 jul",
+    time: "10:30",
+    dayName: "Donderdag"
   }
 ];
 
@@ -49,7 +57,7 @@ export default function AppointmentBooking() {
   const [customerData, setCustomerData] = useState<CustomerData>({ name: "", location: "" });
   const [verificationCode, setVerificationCode] = useState("");
   const [verificationError, setVerificationError] = useState(false);
-  const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
+  const [selectedTimeSlot, setSelectedTimeSlot] = useState<TimeSlot | null>(null);
 
   const handleCustomerSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -73,12 +81,12 @@ export default function AppointmentBooking() {
     }
   };
 
-  const handleAppointmentSelect = (appointment: Appointment) => {
-    setSelectedAppointment(appointment);
+  const handleTimeSlotSelect = (timeSlot: TimeSlot) => {
+    setSelectedTimeSlot(timeSlot);
   };
 
   const handleConfirmAppointment = () => {
-    if (selectedAppointment) {
+    if (selectedTimeSlot) {
       setCurrentStep(4);
     }
   };
@@ -88,7 +96,7 @@ export default function AppointmentBooking() {
     setCustomerData({ name: "", location: "" });
     setVerificationCode("");
     setVerificationError(false);
-    setSelectedAppointment(null);
+    setSelectedTimeSlot(null);
   };
 
   const ProgressIndicator = () => (
@@ -241,37 +249,40 @@ export default function AppointmentBooking() {
     <Card className="shadow-medium border-gray-100">
       <CardContent className="p-8">
         <div className="text-center mb-8">
-          <h2 className="text-2xl font-bold text-foreground mb-2">Afspraak kiezen</h2>
-          <p className="text-muted-foreground">Selecteer een beschikbaar tijdslot bij een monteur in de buurt</p>
+          <h2 className="text-2xl font-bold text-foreground mb-2">Beschikbare tijden</h2>
+          <p className="text-muted-foreground">Kies een datum en tijd die het beste uitkomt</p>
         </div>
         
-        <div className="space-y-4 mb-6">
-          {mockAppointments.map((appointment) => (
+        <div className="space-y-3 mb-6">
+          {mockTimeSlots.map((timeSlot) => (
             <div
-              key={appointment.id}
-              onClick={() => handleAppointmentSelect(appointment)}
+              key={timeSlot.id}
+              onClick={() => handleTimeSlotSelect(timeSlot)}
               className={cn(
-                "border rounded-xl p-4 transition-all duration-200 cursor-pointer",
-                selectedAppointment?.id === appointment.id
-                  ? "border-primary bg-blue-50"
-                  : "border-gray-200 hover:border-primary hover:bg-blue-50"
+                "border rounded-xl p-4 transition-all duration-200 cursor-pointer shadow-soft hover:shadow-medium",
+                selectedTimeSlot?.id === timeSlot.id
+                  ? "border-primary bg-blue-50 ring-2 ring-primary/20"
+                  : "border-gray-200 hover:border-primary/50 hover:bg-gray-50"
               )}
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-4">
-                  <img 
-                    src={appointment.avatar} 
-                    alt={`Monteur ${appointment.technician}`}
-                    className="w-12 h-12 rounded-full object-cover shadow-soft"
-                  />
+                  <div className="text-center min-w-[60px]">
+                    <p className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+                      {timeSlot.dayName.slice(0, 3)}
+                    </p>
+                    <p className="text-lg font-bold text-foreground">
+                      {timeSlot.date}
+                    </p>
+                  </div>
+                  <div className="h-8 w-px bg-gray-200"></div>
                   <div>
-                    <p className="font-semibold text-foreground">{appointment.time}</p>
-                    <p className="text-sm text-muted-foreground">{appointment.technician}</p>
-                    <p className="text-xs text-green-600 font-medium">{appointment.distance}</p>
+                    <p className="text-xl font-bold text-foreground">{timeSlot.time}</p>
+                    <p className="text-sm text-muted-foreground">{timeSlot.dayName}</p>
                   </div>
                 </div>
                 <div className="w-6 h-6 rounded-full border-2 border-gray-300 flex items-center justify-center">
-                  {selectedAppointment?.id === appointment.id && (
+                  {selectedTimeSlot?.id === timeSlot.id && (
                     <div className="w-3 h-3 rounded-full bg-primary"></div>
                   )}
                 </div>
@@ -282,10 +293,10 @@ export default function AppointmentBooking() {
         
         <Button 
           onClick={handleConfirmAppointment}
-          disabled={!selectedAppointment}
+          disabled={!selectedTimeSlot}
           className={cn(
             "w-full h-14 rounded-xl text-lg font-semibold transition-all duration-200",
-            selectedAppointment 
+            selectedTimeSlot 
               ? "shadow-medium hover:shadow-large hover:-translate-y-0.5" 
               : "bg-gray-300 text-gray-500 cursor-not-allowed hover:bg-gray-300 hover:translate-y-0"
           )}
@@ -311,20 +322,20 @@ export default function AppointmentBooking() {
           <h3 className="font-semibold text-foreground mb-4">Afspraak Details</h3>
           <div className="space-y-3 text-sm">
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Tijd:</span>
-              <span className="font-medium text-foreground">{selectedAppointment?.time}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Monteur:</span>
-              <span className="font-medium text-foreground">{selectedAppointment?.technician}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Afstand:</span>
-              <span className="font-medium text-green-600">{selectedAppointment?.distance}</span>
-            </div>
-            <div className="flex justify-between">
               <span className="text-muted-foreground">Datum:</span>
-              <span className="font-medium text-foreground">Vandaag</span>
+              <span className="font-medium text-foreground">{selectedTimeSlot?.dayName}, {selectedTimeSlot?.date}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Tijd:</span>
+              <span className="font-medium text-foreground">{selectedTimeSlot?.time}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Naam:</span>
+              <span className="font-medium text-foreground">{customerData.name}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Locatie:</span>
+              <span className="font-medium text-foreground">{customerData.location}</span>
             </div>
           </div>
         </div>
