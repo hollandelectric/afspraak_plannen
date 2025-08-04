@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Check, AlertCircle, ChevronLeft, ChevronRight } from "lucide-react";
+import { Check, AlertCircle, ChevronLeft, ChevronRight, FileText, Clock, Euro, ChevronDown, ChevronUp, AlertTriangle, CheckSquare, Square } from "lucide-react";
 import { cn } from "@/lib/utils";
 import logoPath from "@assets/HollandElectric-logo.png (1)_1753019272215.webp";
 
@@ -25,12 +25,21 @@ interface TimeSlot {
   fullDate: Date;
 }
 
-// Generate time slots for 3 weeks
+interface Quote {
+  id: string;
+  service: string;
+  description: string;
+  price: number;
+  duration: string;
+  validUntil: string;
+}
+
+// Generate time slots for 2 weeks
 const generateTimeSlots = (): TimeSlot[] => {
   const timeSlots: TimeSlot[] = [];
   const today = new Date();
   const startDate = new Date(today);
-  startDate.setDate(today.getDate() + 1); // Start from tomorrow
+  startDate.setDate(today.getDate() + 1);
   
   const availableTimes = ["09:00", "10:30", "11:00", "14:30", "16:00"];
   const dayNames = ["Zondag", "Maandag", "Dinsdag", "Woensdag", "Donderdag", "Vrijdag", "Zaterdag"];
@@ -38,17 +47,14 @@ const generateTimeSlots = (): TimeSlot[] => {
   
   let id = 1;
   
-  // Generate slots for 3 weeks (21 days)
-  for (let week = 0; week < 3; week++) {
+  for (let week = 0; week < 2; week++) {
     for (let day = 0; day < 7; day++) {
       const currentDate = new Date(startDate);
       currentDate.setDate(startDate.getDate() + (week * 7) + day);
       
-      // Skip weekends for appointments
       if (currentDate.getDay() === 0 || currentDate.getDay() === 6) continue;
       
-      // Generate 2-3 random time slots per day
-      const numSlots = Math.floor(Math.random() * 2) + 2; // 2-3 slots
+      const numSlots = Math.floor(Math.random() * 2) + 2;
       const shuffledTimes = [...availableTimes].sort(() => 0.5 - Math.random()).slice(0, numSlots);
       
       shuffledTimes.forEach(time => {
@@ -69,45 +75,25 @@ const generateTimeSlots = (): TimeSlot[] => {
 
 const allTimeSlots = generateTimeSlots();
 
+const sampleQuote: Quote = {
+  id: "20250803-212659251",
+  service: "HEP 3 fase groepenkast 10 groepen B220xH330",
+  description: "Complete elektrische installatie inclusief groepenkast, inductie groep, en alle benodigde kabelroutes voor keukenapparatuur. Inclusief voorrij- en montagekosten met 10 jaar garantie.",
+  price: 2448.36,
+  duration: "1-2 dagen",
+  validUntil: "1 november 2025"
+};
+
 const ProgressIndicator = ({ currentStep }: { currentStep: number }) => (
-  <div className="text-center mb-8">
-    <div className="flex items-center justify-center space-x-2 mb-6">
-      <div className="flex items-center">
-        <div className={cn(
-          "w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold shadow-soft transition-colors",
-          currentStep >= 1 ? "bg-primary text-primary-foreground" : "bg-gray-200 text-gray-500"
-        )}>
-          1
-        </div>
-        <div className="w-12 h-0.5 bg-gray-200 ml-2"></div>
-      </div>
-      <div className="flex items-center">
-        <div className={cn(
-          "w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold transition-colors",
-          currentStep >= 2 ? "bg-primary text-primary-foreground" : "bg-gray-200 text-gray-500"
-        )}>
-          2
-        </div>
-        <div className="w-12 h-0.5 bg-gray-200 ml-2"></div>
-      </div>
-      <div className="flex items-center">
-        <div className={cn(
-          "w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold transition-colors",
-          currentStep >= 3 ? "bg-primary text-primary-foreground" : "bg-gray-200 text-gray-500"
-        )}>
-          3
-        </div>
-        <div className="w-12 h-0.5 bg-gray-200 ml-2"></div>
-      </div>
-      <div className={cn(
-        "w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold transition-colors",
-        currentStep >= 4 ? "bg-primary text-primary-foreground" : "bg-gray-200 text-gray-500"
-      )}>
-        4
-      </div>
+  <div className="mb-6">
+    <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
+      <div 
+        className="bg-amber-500 h-2 rounded-full transition-all duration-300 ease-out"
+        style={{ width: `${(currentStep / 6) * 100}%` }}
+      ></div>
     </div>
-    <p className="text-sm text-muted-foreground font-medium">
-      {currentStep <= 4 ? `Stap ${currentStep} van 4` : "Voltooid"}
+    <p className="text-xs text-muted-foreground text-center">
+      {currentStep <= 6 ? `Stap ${currentStep} van 6` : "Voltooid"}
     </p>
   </div>
 );
@@ -125,7 +111,7 @@ const Step1CustomerDetails = ({
     <CardContent className="p-8">
       <div className="text-center mb-8">
         <h2 className="text-2xl font-bold text-foreground mb-2">Email adres</h2>
-        <p className="text-muted-foreground">Vul je email adres in om een afspraak in te plannen</p>
+        <p className="text-muted-foreground">Vul je email adres in om een offerte te ontvangen</p>
       </div>
       
       <form onSubmit={handleCustomerSubmit} className="space-y-6">
@@ -150,11 +136,11 @@ const Step1CustomerDetails = ({
           type="submit"
           className="w-full h-14 rounded-xl text-lg font-semibold shadow-medium hover:shadow-large transition-all duration-200 hover:-translate-y-0.5"
         >
-          Verificatie starten
+          Offerte aanvragen
         </Button>
         
         <p className="text-xs text-muted-foreground text-center">
-          Je ontvangt een code via WhatsApp voor verificatie
+          Je ontvangt een persoonlijke offerte voor je elektrische werkzaamheden
         </p>
       </form>
     </CardContent>
@@ -243,7 +229,412 @@ const Step2Verification = ({
   </Card>
 );
 
-const Step3AppointmentSelection = ({ 
+const Step3QuoteConfirmation = ({ 
+  quote, 
+  handleQuoteAccept,
+  onGoBack
+}: {
+  quote: Quote;
+  handleQuoteAccept: () => void;
+  onGoBack: () => void;
+}) => {
+  const [expandedItems, setExpandedItems] = useState<Set<number>>(new Set());
+  const [showConfirmation, setShowConfirmation] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
+
+  const toggleItem = (index: number) => {
+    const newExpanded = new Set(expandedItems);
+    if (newExpanded.has(index)) {
+      newExpanded.delete(index);
+    } else {
+      newExpanded.add(index);
+    }
+    setExpandedItems(newExpanded);
+  };
+
+  const handleAcceptClick = () => {
+    if (!acceptedTerms) {
+      return;
+    }
+    setShowConfirmation(true);
+  };
+
+  const handleConfirmAccept = () => {
+    setShowConfirmation(false);
+    handleQuoteAccept();
+  };
+
+  const handleCancelAccept = () => {
+    setShowConfirmation(false);
+  };
+
+  const quoteItems = [
+    {
+      title: "HEP 3 fase groepenkast",
+      price: "€ 2.023,44",
+      description: "10 groepen B220xH330 + installatie",
+      details: [
+        "10x Installatieautomaat B16",
+        "1x Fornuisgroep 2-fase 2-nul", 
+        "3x Aardlekschakelaar 2P 40A",
+        "1x Hoofdschakelaar 4P 40A",
+        "Inclusief voorrij- en montagekosten",
+        "Inclusief 10 jaar garantie",
+        "Oplevering conform NEN1010"
+      ]
+    },
+    {
+      title: "Inductie groep aanleg",
+      price: "€ 150,00",
+      description: "Aanleg via kruipruimte",
+      details: [
+        "Kabelroute via kruipruimte",
+        "Aanleg kabel 5x2,5mm2",
+        "Montage Perilex WCD",
+        "10 meter kabel inbegrepen"
+      ]
+    },
+    {
+      title: "4x Kabelroutes keuken",
+      price: "€ 300,00",
+      description: "Oven, vaatwasser, Quooker, koelkast",
+      details: [
+        "Aanleg kabel 3x2,5mm2",
+        "Montage WCD",
+        "10 meter kabel inbegrepen"
+      ]
+    },
+    {
+      title: "2x Kabelroutes wasmachine",
+      price: "€ 150,00",
+      description: "Wasmachine en droger",
+      details: [
+        "Aanleg kabel 3x2,5mm2",
+        "Montage WCD",
+        "10 meter kabel inbegrepen"
+      ]
+    }
+  ];
+
+  return (
+  <div className="w-full max-w-lg mx-auto">
+    <div className="text-center mb-6">
+      <h2 className="text-2xl font-bold text-foreground mb-2">Je offerte</h2>
+      <p className="text-muted-foreground">Bekijk en accepteer je persoonlijke offerte</p>
+    </div>
+    
+    {/* Klantgegevens */}
+    <div className="bg-gradient-to-r from-green-700 to-green-800 rounded-xl p-4 mb-4 text-white">
+      <div className="grid grid-cols-1 gap-3 text-sm">
+        <div>
+          <p className="font-semibold text-white">Niels Boswinkel</p>
+          <p className="text-green-100">Hoofdstraat 123</p>
+          <p className="text-green-100">1234 AB Amsterdam</p>
+          <div className="mt-2 space-y-1">
+            <p className="text-green-100">niels@boswinkelaudio.nl</p>
+            <p className="text-green-100">0621145123</p>
+          </div>
+        </div>
+        <div>
+          <p className="text-green-200 text-xs">Vervalt: {quote.validUntil}</p>
+          <p className="text-green-200 text-xs">Door: Bas Janssen</p>
+        </div>
+      </div>
+    </div>
+    
+    {/* Offerte Content */}
+    <div className="bg-white border border-gray-200 rounded-xl p-4 mb-4">
+      <h3 className="font-semibold text-gray-700 mb-3">Samenvatting</h3>
+      
+      {/* Quote items met toggles */}
+      <div className="space-y-2 mb-4">
+        {quoteItems.map((item, index) => (
+          <div key={index} className="border border-gray-100 rounded-lg">
+            <button
+              onClick={() => toggleItem(index)}
+              className="w-full flex items-center justify-between p-3 text-left hover:bg-gray-50 transition-colors"
+            >
+              <div className="flex-1">
+                <div className="flex justify-between items-center mb-1">
+                  <p className="font-semibold text-gray-800 text-sm">{item.title}</p>
+                  <div className="flex items-center space-x-2">
+                    <span className="font-semibold text-green-600 text-sm">{item.price}</span>
+                    {expandedItems.has(index) ? (
+                      <ChevronUp className="w-4 h-4 text-gray-500" />
+                    ) : (
+                      <ChevronDown className="w-4 h-4 text-gray-500" />
+                    )}
+                  </div>
+                </div>
+                <p className="text-xs text-gray-600">{item.description}</p>
+              </div>
+            </button>
+            
+            {expandedItems.has(index) && (
+              <div className="px-3 pb-3 border-t border-gray-100">
+                <div className="pt-2 space-y-1">
+                  {item.details.map((detail, detailIndex) => (
+                    <div key={detailIndex} className="flex items-start">
+                      <div className="w-1 h-1 bg-gray-400 rounded-full mt-2 mr-2 flex-shrink-0"></div>
+                      <p className="text-xs text-gray-600">{detail}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+      
+      {/* Totaal */}
+      <div className="border-t border-gray-200 pt-3">
+        <div className="flex justify-between text-sm mb-1">
+          <span>Subtotaal</span>
+          <span>€ 2.023,44</span>
+        </div>
+        <div className="flex justify-between text-sm mb-2">
+          <span>BTW (21%)</span>
+          <span>€ 424,92</span>
+        </div>
+        <div className="flex justify-between text-lg font-bold text-green-700 border-t border-gray-200 pt-2">
+          <span>Totaal</span>
+          <span>€ 2.448,36</span>
+        </div>
+      </div>
+    </div>
+    
+    {/* Terms and conditions checkbox */}
+    <div className="mb-4">
+      <button
+        onClick={() => setAcceptedTerms(!acceptedTerms)}
+        className="flex items-center space-x-3 w-full p-3 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 transition-colors"
+      >
+        <div className="flex-shrink-0">
+          {acceptedTerms ? (
+            <CheckSquare className="w-5 h-5 text-green-600" />
+          ) : (
+            <Square className="w-5 h-5 text-gray-400" />
+          )}
+        </div>
+        <div className="text-left">
+          <p className="text-sm font-medium text-gray-900">
+            Ik ga akkoord met de voorwaarden
+          </p>
+          <p className="text-xs text-gray-500 mt-1">
+            Door te accepteren ga je akkoord met onze algemene voorwaarden en privacybeleid
+          </p>
+        </div>
+      </button>
+    </div>
+
+    {/* Action buttons */}
+    <div className="flex gap-3">
+      <Button 
+        type="button"
+        variant="ghost"
+        onClick={onGoBack}
+        className="h-12 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-gray-50 transition-all duration-200"
+      >
+        ← Vorige
+      </Button>
+      <Button 
+        onClick={handleAcceptClick}
+        disabled={!acceptedTerms}
+        className={cn(
+          "h-12 rounded-xl text-base font-semibold flex-1 transition-all duration-200",
+          acceptedTerms 
+            ? "shadow-medium hover:shadow-large hover:-translate-y-0.5 bg-green-600 hover:bg-green-700" 
+            : "bg-gray-300 text-gray-500 cursor-not-allowed hover:bg-gray-300 hover:translate-y-0"
+        )}
+      >
+        Accepteer & plan afspraak
+      </Button>
+    </div>
+
+    {/* Confirmation Modal */}
+    {showConfirmation && (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-xl p-6 max-w-md w-full shadow-xl">
+          <div className="text-center mb-6">
+            <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <AlertTriangle className="w-8 h-8 text-amber-600" />
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">Bevestig acceptatie</h3>
+            <p className="text-gray-600">
+              Weet je zeker dat je deze offerte wilt accepteren voor €{quote.price.toFixed(2)}?
+            </p>
+          </div>
+          
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6">
+            <p className="text-sm text-amber-800">
+              <strong>Let op:</strong> Door te accepteren ga je akkoord met de voorwaarden en wordt je afspraak ingepland.
+            </p>
+          </div>
+          
+          <div className="flex gap-3">
+            <Button
+              onClick={handleCancelAccept}
+              variant="ghost"
+              className="flex-1 h-12 rounded-xl text-sm font-medium text-gray-600 hover:text-gray-800 hover:bg-gray-50"
+            >
+              Annuleren
+            </Button>
+            <Button
+              onClick={handleConfirmAccept}
+              className="flex-1 h-12 rounded-xl text-base font-semibold bg-green-600 hover:bg-green-700 shadow-medium hover:shadow-large transition-all duration-200"
+            >
+              Ja, accepteer offerte
+            </Button>
+          </div>
+        </div>
+      </div>
+    )}
+  </div>
+  );
+};
+
+const Step4AddressCheck = ({ 
+  customerData, 
+  setCustomerData, 
+  handleAddressConfirm,
+  onGoBack
+}: {
+  customerData: CustomerData;
+  setCustomerData: React.Dispatch<React.SetStateAction<CustomerData>>;
+  handleAddressConfirm: () => void;
+  onGoBack: () => void;
+}) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [tempAddress, setTempAddress] = useState({
+    address: customerData.address || "Hoofdstraat 123",
+    location: customerData.location || "Amsterdam",
+    phoneNumber: customerData.phoneNumber || "1234 AB"
+  });
+
+  const handleSaveAddress = () => {
+    setCustomerData(prev => ({
+      ...prev,
+      address: tempAddress.address,
+      location: tempAddress.location,
+      phoneNumber: tempAddress.phoneNumber
+    }));
+    setIsEditing(false);
+  };
+
+  const handleCancelEdit = () => {
+    setTempAddress({
+      address: customerData.address || "Hoofdstraat 123",
+      location: customerData.location || "Amsterdam", 
+      phoneNumber: customerData.phoneNumber || "1234 AB"
+    });
+    setIsEditing(false);
+  };
+
+  return (
+  <Card className="shadow-medium border-gray-100">
+    <CardContent className="p-8">
+      <div className="text-center mb-8">
+        <h2 className="text-2xl font-bold text-foreground mb-2">Adres bevestiging</h2>
+        <p className="text-muted-foreground">Controleer je adres voor de afspraak</p>
+      </div>
+      
+      <div className="bg-gray-50 border border-gray-200 rounded-xl p-6 mb-6">
+        <div className="mb-4">
+          <h3 className="font-semibold text-gray-800">Huidig adres:</h3>
+        </div>
+        
+        {!isEditing ? (
+          <div className="space-y-2 text-sm">
+            <p className="text-gray-600">Niels Boswinkel</p>
+            <p className="text-gray-800 font-medium">{customerData.address || "Hoofdstraat 123"}</p>
+            <p className="text-gray-800 font-medium">{customerData.phoneNumber || "1234 AB"} {customerData.location || "Amsterdam"}</p>
+            <p className="text-gray-600">niels@boswinkelaudio.nl</p>
+            <p className="text-gray-600">0621145123</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="edit-address" className="text-sm font-medium text-gray-700 mb-1 block">
+                Straatnaam en huisnummer
+              </Label>
+              <Input
+                id="edit-address"
+                type="text"
+                value={tempAddress.address}
+                onChange={(e) => setTempAddress(prev => ({ ...prev, address: e.target.value }))}
+                className="h-10 text-sm"
+                placeholder="Bijv. Hoofdstraat 123"
+              />
+            </div>
+            <div>
+              <Label htmlFor="edit-postcode" className="text-sm font-medium text-gray-700 mb-1 block">
+                Postcode
+              </Label>
+              <Input
+                id="edit-postcode"
+                type="text"
+                value={tempAddress.phoneNumber}
+                onChange={(e) => setTempAddress(prev => ({ ...prev, phoneNumber: e.target.value }))}
+                className="h-10 text-sm"
+                placeholder="Bijv. 1234 AB"
+              />
+            </div>
+            <div>
+              <Label htmlFor="edit-location" className="text-sm font-medium text-gray-700 mb-1 block">
+                Plaats
+              </Label>
+              <Input
+                id="edit-location"
+                type="text"
+                value={tempAddress.location}
+                onChange={(e) => setTempAddress(prev => ({ ...prev, location: e.target.value }))}
+                className="h-10 text-sm"
+                placeholder="Bijv. Amsterdam"
+              />
+            </div>
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={handleSaveAddress}
+                className="w-full h-8 text-sm bg-green-600 hover:bg-green-700 border-2 border-green-600 text-white font-medium rounded-lg transition-colors"
+              >
+                Opslaan
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+      
+      <div className="bg-green-50 border border-green-200 rounded-xl p-4 mb-6">
+        <h4 className="font-semibold text-green-900 mb-2">Klopt dit adres?</h4>
+        <p className="text-sm text-green-800">
+          Controleer of dit het juiste adres is waar de elektricien naartoe moet komen. 
+          Onze elektricien zal contact opnemen voor de afspraak.
+        </p>
+      </div>
+      
+      <div className="flex gap-3">
+        <Button 
+          type="button"
+          variant="ghost"
+          onClick={onGoBack}
+          className="h-14 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-gray-50 transition-all duration-200"
+        >
+          ← Vorige
+        </Button>
+        <Button 
+          onClick={handleAddressConfirm}
+          className="h-14 rounded-xl text-lg font-semibold flex-1 shadow-medium hover:shadow-large transition-all duration-200 hover:-translate-y-0.5 bg-green-600 hover:bg-green-700"
+        >
+          Adres klopt, ga verder
+        </Button>
+      </div>
+    </CardContent>
+  </Card>
+  );
+};
+
+const Step5AppointmentSelection = ({ 
   selectedTimeSlot, 
   handleTimeSlotSelect, 
   handleConfirmAppointment,
@@ -296,12 +687,28 @@ const Step3AppointmentSelection = ({
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => setCurrentWeek(Math.min(3, currentWeek + 1))}
-            disabled={currentWeek === 3}
+            onClick={() => setCurrentWeek(Math.min(2, currentWeek + 1))}
+            disabled={currentWeek === 2}
             className="h-8 w-8 p-0 hover:bg-gray-100 disabled:opacity-30"
           >
             <ChevronRight className="w-4 h-4" />
           </Button>
+        </div>
+        
+        {/* Telefonisch contact melding */}
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6">
+          <div className="flex items-start space-x-3">
+            <div className="flex-shrink-0 mt-0.5">
+              <AlertTriangle className="w-5 h-5 text-amber-600" />
+            </div>
+            <div>
+              <h4 className="font-semibold text-amber-900 mb-1">Geen geschikte tijd gevonden?</h4>
+              <p className="text-sm text-amber-800">
+                Kunnen we geen geschikte tijd vinden in de komende 2 weken? 
+                Neem dan telefonisch contact op via <strong>020-1234567</strong> voor een persoonlijke afspraak.
+              </p>
+            </div>
+          </div>
         </div>
         
         {/* Time Slots */}
@@ -371,79 +778,150 @@ const Step3AppointmentSelection = ({
             Bevestig afspraak
           </Button>
         </div>
+        
+        {/* Telefonisch contact toggle */}
+        <div className="mt-4">
+          <details className="group">
+            <summary className="flex items-center justify-center cursor-pointer text-sm text-muted-foreground hover:text-foreground transition-colors">
+              <span className="mr-1">Geen geschikte tijd gevonden?</span>
+              <ChevronDown className="w-4 h-4 transition-transform group-open:rotate-180" />
+            </summary>
+            <div className="mt-3 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+              <div className="flex items-start space-x-3">
+                <div className="flex-shrink-0 mt-0.5">
+                  <AlertTriangle className="w-4 h-4 text-amber-600" />
+                </div>
+                <div>
+                  <p className="text-sm text-gray-700">
+                    Kunnen we geen geschikte tijd vinden in de komende 2 weken? 
+                    Neem dan telefonisch contact op via <strong>020-1234567</strong> voor een persoonlijke afspraak.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </details>
+        </div>
       </CardContent>
     </Card>
   );
 };
 
-const Step4AddressVerification = ({ 
+const Step6AddressVerification = ({ 
   customerData, 
   setCustomerData, 
   handleAddressSubmit,
-  onGoBack
+  onGoBack,
+  selectedTimeSlot,
+  quote
 }: {
   customerData: CustomerData;
   setCustomerData: React.Dispatch<React.SetStateAction<CustomerData>>;
   handleAddressSubmit: (e: React.FormEvent) => void;
   onGoBack: () => void;
-}) => (
-  <Card className="shadow-medium border-gray-100">
-    <CardContent className="p-8">
-      <div className="text-center mb-8">
-        <h2 className="text-2xl font-bold text-foreground mb-2">Adresgegevens</h2>
-        <p className="text-muted-foreground">Vul je adres in voor de afspraak</p>
-      </div>
-      
-      <form onSubmit={handleAddressSubmit} className="space-y-6">
-        <div>
-          <Label htmlFor="address" className="text-sm font-semibold text-foreground mb-2 block">
-            Straatnaam en huisnummer
-          </Label>
-          <Input
-            id="address"
-            type="text"
-            placeholder="Bijv. Hoofdstraat 123"
-            value={customerData.address || ""}
-            onChange={(e) => {
-              setCustomerData(prev => ({ ...prev, address: e.target.value }));
-            }}
-            className="shadow-soft rounded-xl border-gray-200 focus:ring-2 focus:ring-primary focus:border-primary h-12"
-            required
-          />
+  selectedTimeSlot: TimeSlot | null;
+  quote: Quote;
+}) => {
+  const [showConfirmation, setShowConfirmation] = useState(false);
+
+  const handleConfirmClick = () => {
+    setShowConfirmation(true);
+  };
+
+  const handleConfirmSubmit = () => {
+    setShowConfirmation(false);
+    handleAddressSubmit(new Event('submit') as any);
+  };
+
+  const handleCancelSubmit = () => {
+    setShowConfirmation(false);
+  };
+
+  return (
+    <Card className="shadow-medium border-gray-100">
+      <CardContent className="p-8">
+        <div className="text-center mb-8">
+          <h2 className="text-2xl font-bold text-foreground mb-2">Definitieve bevestiging</h2>
+          <p className="text-muted-foreground">Controleer alle gegevens voordat je je afspraak definitief maakt</p>
         </div>
         
-        <div>
-          <Label htmlFor="postcode" className="text-sm font-semibold text-foreground mb-2 block">
-            Postcode
-          </Label>
-          <Input
-            id="postcode"
-            type="text"
-            placeholder="Bijv. 1234 AB"
-            value={customerData.phoneNumber || ""}
-            onChange={(e) => {
-              setCustomerData(prev => ({ ...prev, phoneNumber: e.target.value }));
-            }}
-            className="shadow-soft rounded-xl border-gray-200 focus:ring-2 focus:ring-primary focus:border-primary h-12"
-            required
-          />
-        </div>
-        
-        <div>
-          <Label htmlFor="location" className="text-sm font-semibold text-foreground mb-2 block">
-            Plaats
-          </Label>
-          <Input
-            id="location"
-            type="text"
-            placeholder="Bijv. Amsterdam"
-            value={customerData.location || ""}
-            onChange={(e) => {
-              setCustomerData(prev => ({ ...prev, location: e.target.value }));
-            }}
-            className="shadow-soft rounded-xl border-gray-200 focus:ring-2 focus:ring-primary focus:border-primary h-12"
-            required
-          />
+        {/* Samenvatting */}
+        <div className="space-y-4 mb-6">
+          {/* Services Card */}
+          <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-soft">
+            <div className="flex items-center mb-4">
+              <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mr-3">
+                <FileText className="w-4 h-4 text-green-600" />
+              </div>
+              <h3 className="font-semibold text-gray-800">Services</h3>
+            </div>
+            
+            <div className="space-y-3">
+              <div className="flex justify-between items-center py-2 px-3 bg-gray-50 rounded-lg">
+                <span className="text-sm font-medium text-gray-700">HEP 3 fase groepenkast</span>
+                <span className="font-semibold text-green-600">€ 2.023,44</span>
+              </div>
+              <div className="flex justify-between items-center py-2 px-3 bg-gray-50 rounded-lg">
+                <span className="text-sm font-medium text-gray-700">Inductie groep aanleg</span>
+                <span className="font-semibold text-green-600">€ 150,00</span>
+              </div>
+              <div className="flex justify-between items-center py-2 px-3 bg-gray-50 rounded-lg">
+                <span className="text-sm font-medium text-gray-700">4x Kabelroutes keuken</span>
+                <span className="font-semibold text-green-600">€ 300,00</span>
+              </div>
+              <div className="flex justify-between items-center py-2 px-3 bg-gray-50 rounded-lg">
+                <span className="text-sm font-medium text-gray-700">2x Kabelroutes wasmachine</span>
+                <span className="font-semibold text-green-600">€ 150,00</span>
+              </div>
+              
+              <div className="border-t border-gray-200 pt-3 mt-3">
+                <div className="flex justify-between items-center py-2 px-3 bg-green-50 rounded-lg">
+                  <span className="font-semibold text-gray-800">Totaal</span>
+                  <span className="font-bold text-green-700 text-lg">€ 2.448,36</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          {/* Afspraak Card */}
+          <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-soft">
+            <div className="flex items-center mb-4">
+              <div className="w-8 h-8 bg-amber-100 rounded-full flex items-center justify-center mr-3">
+                <Clock className="w-4 h-4 text-amber-600" />
+              </div>
+              <h3 className="font-semibold text-gray-800">Afspraak</h3>
+            </div>
+            <div className="bg-amber-50 rounded-lg p-3">
+              <p className="text-sm font-medium text-amber-800">
+                {selectedTimeSlot?.dayName}, {selectedTimeSlot?.date} om {selectedTimeSlot?.time}
+              </p>
+            </div>
+          </div>
+          
+          {/* Contact & Adres Card */}
+          <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-soft">
+            <div className="flex items-center mb-4">
+              <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-3">
+                <Check className="w-4 h-4 text-blue-600" />
+              </div>
+              <h3 className="font-semibold text-gray-800">Contact & Adres</h3>
+            </div>
+            
+            <div className="grid grid-cols-1 gap-4">
+              <div className="bg-blue-50 rounded-lg p-3">
+                <p className="text-xs font-medium text-blue-700 mb-1">Contact</p>
+                <p className="text-sm text-blue-800">{customerData.email}</p>
+                <p className="text-sm text-blue-800">0621145123</p>
+              </div>
+              
+              <div className="bg-green-50 rounded-lg p-3">
+                <p className="text-xs font-medium text-green-700 mb-1">Adres</p>
+                <p className="text-sm text-green-800">
+                  Hoofdstraat 123<br />
+                  1234 AB Amsterdam
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
         
         <div className="flex gap-3 items-center">
@@ -456,74 +934,132 @@ const Step4AddressVerification = ({
             ← Vorige
           </Button>
           <Button 
-            type="submit"
+            onClick={handleConfirmClick}
             className="h-14 rounded-xl text-lg font-semibold flex-1 shadow-medium hover:shadow-large transition-all duration-200 hover:-translate-y-0.5"
           >
-            Bevestig gegevens
+            Maak afspraak definitief
           </Button>
         </div>
-      </form>
-    </CardContent>
-  </Card>
-);
+        
+        {/* Confirmation Modal */}
+        {showConfirmation && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl p-6 max-w-md w-full shadow-xl">
+              <div className="text-center mb-6">
+                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Check className="w-8 h-8 text-green-600" />
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">Bevestig je afspraak</h3>
+                <p className="text-gray-600">
+                  Weet je zeker dat je je afspraak definitief wilt maken?
+                </p>
+              </div>
+              
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+                <div className="flex items-start space-x-3">
+                  <div className="flex-shrink-0 mt-0.5">
+                    <AlertTriangle className="w-4 h-4 text-green-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-green-800">
+                      <strong>Let op:</strong> Door te bevestigen wordt je afspraak definitief ingepland en ontvang je een bevestiging via WhatsApp.
+                    </p>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex gap-3">
+                <Button
+                  onClick={handleCancelSubmit}
+                  variant="ghost"
+                  className="flex-1 h-12 rounded-xl text-sm font-medium text-gray-600 hover:text-gray-800 hover:bg-gray-50"
+                >
+                  Annuleren
+                </Button>
+                <Button
+                  onClick={handleConfirmSubmit}
+                  className="flex-1 h-12 rounded-xl text-base font-semibold bg-green-600 hover:bg-green-700 shadow-medium hover:shadow-large transition-all duration-200"
+                >
+                  Ja, maak definitief
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+};
 
 const ConfirmationScreen = ({ 
   selectedTimeSlot, 
   customerData, 
+  quote,
   handleReset 
 }: {
   selectedTimeSlot: TimeSlot | null;
   customerData: CustomerData;
+  quote: Quote;
   handleReset: () => void;
-}) => (
-  <Card className="shadow-medium border-gray-100">
-    <CardContent className="p-8 text-center">
-      <div className="mb-8">
-        <div className="w-20 h-20 bg-primary rounded-full flex items-center justify-center mx-auto mb-6 shadow-large">
-          <Check className="w-10 h-10 text-white" />
+}) => {
+  return (
+    <Card className="shadow-medium border-gray-100">
+      <CardContent className="p-8 text-center">
+        <div className="mb-8">
+          <div className="w-20 h-20 bg-primary rounded-full flex items-center justify-center mx-auto mb-6 shadow-large">
+            <Check className="w-10 h-10 text-white" />
+          </div>
+          <h2 className="text-2xl font-bold text-foreground mb-4">Bedankt, je afspraak is ingepland!</h2>
+          <p className="text-muted-foreground">Je ontvangt een bevestiging via WhatsApp</p>
         </div>
-        <h2 className="text-2xl font-bold text-foreground mb-4">Bedankt, je afspraak is ingepland!</h2>
-        <p className="text-muted-foreground">Je ontvangt een bevestiging via WhatsApp</p>
-      </div>
-      
-      <div className="bg-gray-50 rounded-xl p-6 mb-6">
-        <h3 className="font-semibold text-foreground mb-4">Volledige afspraak overzicht</h3>
-        <div className="space-y-3 text-sm">
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Datum:</span>
-            <span className="font-medium text-foreground">{selectedTimeSlot?.dayName}, {selectedTimeSlot?.date}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Tijd:</span>
-            <span className="font-medium text-foreground">{selectedTimeSlot?.time}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Email:</span>
-            <span className="font-medium text-foreground">{customerData.email}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Adres:</span>
-            <span className="font-medium text-foreground">{customerData.address}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Postcode:</span>
-            <span className="font-medium text-foreground">{customerData.phoneNumber}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Plaats:</span>
-            <span className="font-medium text-foreground">{customerData.location}</span>
+        
+        <div className="bg-gray-50 rounded-xl p-6 mb-6">
+          <h3 className="font-semibold text-foreground mb-4">Volledige afspraak overzicht</h3>
+          <div className="space-y-3 text-sm">
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Service:</span>
+              <span className="font-medium text-foreground">{quote.service}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Prijs:</span>
+              <span className="font-medium text-foreground">€{quote.price.toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Datum:</span>
+              <span className="font-medium text-foreground">{selectedTimeSlot?.dayName}, {selectedTimeSlot?.date}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Tijd:</span>
+              <span className="font-medium text-foreground">{selectedTimeSlot?.time}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Email:</span>
+              <span className="font-medium text-foreground">{customerData.email}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Adres:</span>
+              <span className="font-medium text-foreground">{customerData.address}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Postcode:</span>
+              <span className="font-medium text-foreground">{customerData.phoneNumber}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Plaats:</span>
+              <span className="font-medium text-foreground">{customerData.location}</span>
+            </div>
           </div>
         </div>
-      </div>
-      
-      <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
-        <p className="text-sm text-amber-800">
-          <strong>Belangrijk:</strong> Onze elektricien zal voor de afspraak contact opnemen.
-        </p>
-      </div>
-    </CardContent>
-  </Card>
-);
+        
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+          <p className="text-sm text-amber-800">
+            <strong>Belangrijk:</strong> Onze elektricien zal voor de afspraak contact opnemen.
+          </p>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
 
 export default function AppointmentBooking() {
   const [currentStep, setCurrentStep] = useState(1);
@@ -537,7 +1073,8 @@ export default function AppointmentBooking() {
   const [verificationCode, setVerificationCode] = useState("");
   const [verificationError, setVerificationError] = useState(false);
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<TimeSlot | null>(null);
-  const [currentWeek, setCurrentWeek] = useState(1);
+  const [quote] = useState<Quote>(sampleQuote);
+  const [currentWeek, setCurrentWeek] = useState(1); // State for week selection
 
   const handleCustomerSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -561,36 +1098,21 @@ export default function AppointmentBooking() {
     }
   };
 
+  const handleAddressConfirm = () => {
+    setCurrentStep(5);
+  };
+
   const handleTimeSlotSelect = (timeSlot: TimeSlot) => {
     setSelectedTimeSlot(timeSlot);
   };
 
   const handleConfirmAppointment = () => {
-    if (selectedTimeSlot) {
-      setCurrentStep(4);
-    }
+    setCurrentStep(6);
   };
 
   const handleAddressSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (customerData.address?.trim() && customerData.phoneNumber?.trim() && customerData.location?.trim()) {
-      setCurrentStep(5);
-    }
-  };
-
-  const handleReset = () => {
-    setCurrentStep(1);
-    setCustomerData({ 
-      email: "",
-      name: "",
-      location: "",
-      address: "",
-      phoneNumber: ""
-    });
-    setVerificationCode("");
-    setVerificationError(false);
-    setSelectedTimeSlot(null);
-    setCurrentWeek(1);
+    setCurrentStep(7);
   };
 
   const handleGoBack = () => {
@@ -608,8 +1130,8 @@ export default function AppointmentBooking() {
             alt="Holland Electric Logo" 
             className="mx-auto h-16 w-auto mb-8"
           />
-          <h1 className="text-3xl font-bold text-foreground">Afspraak inplannen</h1>
-          <p className="text-muted-foreground mt-2">Plan eenvoudig een afspraak met onze elektriciens</p>
+          <h1 className="text-3xl font-bold text-foreground">Offerte & Afspraak</h1>
+          <p className="text-muted-foreground mt-2">Ontvang een offerte en plan direct je afspraak</p>
         </div>
         
         <ProgressIndicator currentStep={currentStep} />
@@ -632,7 +1154,22 @@ export default function AppointmentBooking() {
           />
         )}
         {currentStep === 3 && (
-          <Step3AppointmentSelection 
+          <Step3QuoteConfirmation 
+            quote={quote}
+            handleQuoteAccept={() => setCurrentStep(4)}
+            onGoBack={handleGoBack}
+          />
+        )}
+        {currentStep === 4 && (
+          <Step4AddressCheck 
+            customerData={customerData}
+            setCustomerData={setCustomerData}
+            handleAddressConfirm={handleAddressConfirm}
+            onGoBack={handleGoBack}
+          />
+        )}
+        {currentStep === 5 && (
+          <Step5AppointmentSelection 
             selectedTimeSlot={selectedTimeSlot}
             handleTimeSlotSelect={handleTimeSlotSelect}
             handleConfirmAppointment={handleConfirmAppointment}
@@ -641,19 +1178,23 @@ export default function AppointmentBooking() {
             onGoBack={handleGoBack}
           />
         )}
-        {currentStep === 4 && (
-          <Step4AddressVerification 
+        {currentStep === 6 && (
+          <Step6AddressVerification 
             customerData={customerData}
             setCustomerData={setCustomerData}
             handleAddressSubmit={handleAddressSubmit}
             onGoBack={handleGoBack}
+            selectedTimeSlot={selectedTimeSlot}
+            quote={quote}
           />
         )}
-        {currentStep === 5 && (
+        
+        {currentStep === 7 && (
           <ConfirmationScreen 
             selectedTimeSlot={selectedTimeSlot}
             customerData={customerData}
-            handleReset={handleReset}
+            quote={quote}
+            handleReset={() => setCurrentStep(1)}
           />
         )}
         
@@ -665,4 +1206,4 @@ export default function AppointmentBooking() {
       </div>
     </div>
   );
-}
+} 
