@@ -2,11 +2,9 @@
 builder = "nixpacks"
 
 [deploy]
-startCommand = "npm start"
+startCommand = "npm run build && npm start"
 healthcheckPath = "/"
 healthcheckTimeout = 300
-restartPolicyType = "on_failure"
-restartPolicyMaxRetries = 10
 
-[[services]]
-name = "afspraak_plannen" 
+[env]
+PORT = "3000" 
