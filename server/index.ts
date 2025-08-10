@@ -1,3 +1,4 @@
+import "dotenv/config";
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
@@ -56,9 +57,9 @@ app.use((req, res, next) => {
     serveStatic(app);
   }
 
-  // Always serve the app on port 3000
+  // Always serve the app on configured port
   // This serves both the API and the client.
-  const port = 3000;
+  const port = Number(process.env.PORT) || 5001;
   server.listen({
     port,
     host: "0.0.0.0",
