@@ -1,0 +1,235 @@
+// =====================================================
+// SCORING ALGORITME v2 - ALTIJD SUGGESTIES
+// Zoekt gaten in planning, geeft altijd een voorstel
+// =====================================================
+
+const baseData = $('Merge Calendar Data').first().json;
+const distanceResponse = $input.first().json;
+
+const { preferences, monteurs, calendarEventsPerMonteur, installatieDuurMinuten, config, customerAddress, deal } = baseData;
+
+// Parse reistijden van Google Maps
+const reistijdenPerMonteur = {};
+let minReistijd = Infinity;
+if (distanceResponse.rows && distanceResponse.status === 'OK') {
+  distanceResponse.rows.forEach((row, index) => {
+    const monteur = monteurs[index];
+    if (monteur && row.elements && row.elements[0]) {
+      const element = row.elements[0];
+      const reistijd = element.status === 'OK' ? Math.round(element.duration.value / 60) : 30;
+      reistijdenPerMonteur[monteur.id] = reistijd;
+      if (reistijd < minReistijd) minReistijd = reistijd;
+    }
+  });
+} else {
+  monteurs.forEach(m => { reistijdenPerMonteur[m.id] = 30; });
+  minReistijd = 30;
+}
+
+// Helper: Check of tijdslot beschikbaar is
+function isSlotAvailable(monteurId, date, startTime, durationMinutes) {
+  const events = calendarEventsPerMonteur[monteurId] || [];
+  const slotStart = new Date(`${date}T${startTime}:00`);
+  const slotEnd = new Date(slotStart.getTime() + durationMinutes * 60000);
+  for (const event of events) {
+    const eventStart = new Date(event.start.dateTime);
+    const eventEnd = new Date(event.end.dateTime);
+    if (slotStart < eventEnd && slotEnd > eventStart) return false;
+  }
+  return true;
+}
+
+// Helper: Check werkuren
+function isWithinWorkHours(startTime, durationMinutes, werkuren) {
+  const [startH, startM] = startTime.split(':').map(Number);
+  const startMinutes = startH * 60 + startM;
+  const endMinutes = startMinutes + durationMinutes;
+  const [werkStartH, werkStartM] = werkuren.start.split(':').map(Number);
+  const [werkEndH, werkEndM] = werkuren.eind.split(':').map(Number);
+  return startMinutes >= (werkStartH * 60 + werkStartM) && endMinutes <= (werkEndH * 60 + werkEndM);
+}
+
+// Helper: Tel werklast
+function getWorkload(monteurId) {
+  const events = calendarEventsPerMonteur[monteurId] || [];
+  const now = new Date();
+  const weekStart = new Date(now); weekStart.setDate(now.getDate() - now.getDay() + 1);
+  const weekEnd = new Date(weekStart); weekEnd.setDate(weekStart.getDate() + 6);
+  let jobs = 0, minutes = 0;
+  events.forEach(event => {
+    const eventDate = new Date(event.start.dateTime);
+    if (eventDate >= weekStart && eventDate <= weekEnd) {
+      jobs++;
+      minutes += (new Date(event.end.dateTime) - new Date(event.start.dateTime)) / 60000;
+    }
+  });
+  return { jobs, hours: minutes / 60 };
+}
+
+// Helper: Check of slot een gat opvult (efficiency bonus)
+function checksGapFilling(monteurId, date, startTime, durationMinutes) {
+  const events = calendarEventsPerMonteur[monteurId] || [];
+  const slotStart = new Date(`${date}T${startTime}:00`);
+  const slotEnd = new Date(slotStart.getTime() + durationMinutes * 60000);
+  let adjacentBefore = false, adjacentAfter = false;
+  for (const event of events) {
+    const eventStart = new Date(event.start.dateTime);
+    const eventEnd = new Date(event.end.dateTime);
+    if (Math.abs(eventEnd.getTime() - slotStart.getTime()) < 60 * 60000) adjacentBefore = true;
+    if (Math.abs(slotEnd.getTime() - eventStart.getTime()) < 60 * 60000) adjacentAfter = true;
+  }
+  return adjacentBefore || adjacentAfter ? 20 : 0;
+}
+
+// NIEUW: Zoek gaten in calendars voor alle monteurs
+function findCalendarGaps(referenceDate, zoekTerug, zoekVooruit) {
+  const gaps = [];
+  const refDate = new Date(referenceDate);
+  const timeSlots = ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00'];
+  
+  for (let dayOffset = -zoekTerug; dayOffset <= zoekVooruit; dayOffset++) {
+    const checkDate = new Date(refDate);
+    checkDate.setDate(refDate.getDate() + dayOffset);
+    const dayOfWeek = checkDate.getDay();
+    if (dayOfWeek === 0 || dayOfWeek === 6) continue; // Skip weekends
+    const dateStr = checkDate.toISOString().split('T')[0];
+    
+    for (const monteur of monteurs) {
+      const reistijd = reistijdenPerMonteur[monteur.id] || 30;
+      for (const timeSlot of timeSlots) {
+        if (!isWithinWorkHours(timeSlot, installatieDuurMinuten + config.bufferMinuten, monteur.werkuren)) continue;
+        if (!isSlotAvailable(monteur.id, dateStr, timeSlot, installatieDuurMinuten + config.bufferMinuten)) continue;
+        
+        const workload = getWorkload(monteur.id);
+        if (workload.jobs >= monteur.maxJobsPerWeek) continue;
+        
+        const gapBonus = checksGapFilling(monteur.id, dateStr, timeSlot, installatieDuurMinuten);
+        const reistijdScore = Math.max(0, 50 - (reistijd / 2));
+        const datumAfstand = Math.abs(dayOffset);
+        const datumScore = Math.max(0, 30 - (datumAfstand * 3));
+        const score = 100 + reistijdScore + datumScore + gapBonus;
+        
+        gaps.push({
+          date: dateStr,
+          timeSlot,
+          monteur: { id: monteur.id, naam: monteur.naam, email: monteur.email, calendarId: monteur.calendarId },
+          reistijdMinuten: reistijd,
+          workload,
+          score,
+          dayOffset,
+          isGapFiller: gapBonus > 0
+        });
+      }
+    }
+  }
+  return gaps.sort((a, b) => b.score - a.score);
+}
+
+// STAP 1: Score klant-voorkeuren
+const scoredOptions = [];
+const failReasons = [];
+
+for (const preference of preferences) {
+  for (const monteur of monteurs) {
+    const reistijdMinuten = reistijdenPerMonteur[monteur.id] || 30;
+    
+    if (!isWithinWorkHours(preference.timeSlot, installatieDuurMinuten + config.bufferMinuten, monteur.werkuren)) {
+      failReasons.push({ reason: 'buiten_werkuren', preference, monteur: monteur.naam });
+      continue;
+    }
+    if (!isSlotAvailable(monteur.id, preference.date, preference.timeSlot, installatieDuurMinuten + config.bufferMinuten)) {
+      failReasons.push({ reason: 'niet_beschikbaar', preference, monteur: monteur.naam });
+      continue;
+    }
+    
+    const workload = getWorkload(monteur.id);
+    if (workload.jobs >= monteur.maxJobsPerWeek || workload.hours >= monteur.maxUrenPerWeek) {
+      failReasons.push({ reason: 'werklast_vol', preference, monteur: monteur.naam });
+      continue;
+    }
+    
+    const gapBonus = checksGapFilling(monteur.id, preference.date, preference.timeSlot, installatieDuurMinuten);
+    const reistijdPenalty = reistijdMinuten > config.softMaxReistijdMinuten ? -30 : 0;
+    const score = 100 + Math.max(0, 50 - (reistijdMinuten / 2)) + Math.max(0, 30 - (workload.jobs * 2)) + gapBonus + reistijdPenalty;
+    
+    scoredOptions.push({
+      preference,
+      monteur: { id: monteur.id, naam: monteur.naam, email: monteur.email, calendarId: monteur.calendarId },
+      reistijdMinuten,
+      workload,
+      score,
+      matchType: 'preference',
+      warning: reistijdMinuten > config.softMaxReistijdMinuten ? 'Langere reistijd dan normaal' : null
+    });
+  }
+}
+
+scoredOptions.sort((a, b) => b.score - a.score);
+
+// STAP 2: Als geen match op voorkeuren, zoek gaten
+let matchType = 'preference';
+let alternativeReason = null;
+let allOptions = [...scoredOptions];
+
+if (scoredOptions.length === 0) {
+  matchType = 'alternative';
+  const refDate = preferences[0]?.date || new Date().toISOString().split('T')[0];
+  const gaps = findCalendarGaps(refDate, config.zoekDagenTerug || 3, config.zoekDagenVooruit || 7);
+  
+  if (gaps.length > 0) {
+    alternativeReason = `Uw voorkeursdatum was niet beschikbaar. Dit zijn de eerstvolgende mogelijkheden.`;
+    allOptions = gaps.map(g => ({ ...g, matchType: 'alternative' }));
+  } else {
+    // Echt niets beschikbaar - forceer suggestie met langste reistijd
+    alternativeReason = `Geen beschikbaarheid in de komende ${config.zoekDagenVooruit} dagen.`;
+  }
+}
+
+// STAP 3: Bepaal redenen voor Discord
+const diagnostics = {
+  buitenReisgebied: minReistijd > config.softMaxReistijdMinuten,
+  buitenWerkuren: failReasons.filter(r => r.reason === 'buiten_werkuren').length > 0,
+  geenBeschikbaarheid: failReasons.filter(r => r.reason === 'niet_beschikbaar').length > 0,
+  monteurVolGeboekt: failReasons.filter(r => r.reason === 'werklast_vol').length > 0
+};
+
+// STAP 4: Bouw suggestions array
+const suggestions = allOptions.slice(0, 5).map(opt => {
+  const [startH, startM] = opt.timeSlot ? opt.timeSlot.split(':').map(Number) : opt.preference.timeSlot.split(':').map(Number);
+  const totalMinutes = startH * 60 + startM + installatieDuurMinuten;
+  const endTime = `${String(Math.floor(totalMinutes / 60)).padStart(2, '0')}:${String(totalMinutes % 60).padStart(2, '0')}`;
+  
+  return {
+    date: opt.date || opt.preference?.date,
+    timeSlot: opt.timeSlot || opt.preference?.timeSlot,
+    endTime,
+    period: startH < 12 ? 'ochtend' : 'middag',
+    monteur: opt.monteur,
+    score: opt.score,
+    matchType: opt.matchType || matchType,
+    warning: opt.warning || (opt.reistijdMinuten > config.softMaxReistijdMinuten ? 'Langere reistijd dan normaal' : null),
+    isGapFiller: opt.isGapFiller || false
+  };
+});
+
+return [{
+  json: {
+    dealId: baseData.dealId,
+    contactEmail: baseData.contactEmail,
+    customerAddress,
+    deal,
+    installatieDuurMinuten,
+    config,
+    scoredOptions: allOptions,
+    besteOptie: allOptions[0] || null,
+    matchType,
+    alternativeReason,
+    diagnostics,
+    hasMatch: allOptions.length > 0,
+    hasSuggestions: suggestions.length > 0,
+    suggestions,
+    showContactButton: true,
+    totalOptionsChecked: preferences.length * monteurs.length,
+    availableOptions: allOptions.length
+  }
+}];

@@ -1,0 +1,400 @@
+{
+  "name": "Holland Electric - Afspraak Planner",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "schedule-appointment",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook - Ontvang Aanvraag",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [250, 300],
+      "webhookId": "schedule-appointment"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Monteur configuratie - PAS DIT AAN MET ECHTE DATA\nconst monteurs = [\n  {\n    id: \"monteur1\",\n    email: \"monteur1@hollandelectric.nl\",\n    naam: \"Jan Jansen\",\n    thuisAdres: \"Werkplaats 1, 1000AA Amsterdam\",\n    werkuren: { start: \"08:00\", eind: \"17:00\" },\n    maxJobsPerWeek: 20,\n    maxUrenPerWeek: 40,\n    calendarId: \"CALENDAR_ID_MONTEUR_1\" // Vul in na Azure setup\n  },\n  {\n    id: \"monteur2\",\n    email: \"monteur2@hollandelectric.nl\",\n    naam: \"Piet Pieters\",\n    thuisAdres: \"Straat 2, 2000BB Rotterdam\",\n    werkuren: { start: \"08:00\", eind: \"17:00\" },\n    maxJobsPerWeek: 20,\n    maxUrenPerWeek: 40,\n    calendarId: \"CALENDAR_ID_MONTEUR_2\"\n  },\n  {\n    id: \"monteur3\",\n    email: \"monteur3@hollandelectric.nl\",\n    naam: \"KlaasAnsen\",\n    thuisAdres: \"Weg 3, 3000CC Utrecht\",\n    werkuren: { start: \"08:00\", eind: \"17:00\" },\n    maxJobsPerWeek: 20,\n    maxUrenPerWeek: 40,\n    calendarId: \"CALENDAR_ID_MONTEUR_3\"\n  },\n  {\n    id: \"monteur4\",\n    email: \"monteur4@hollandelectric.nl\",\n    naam: \"Henk de Vries\",\n    thuisAdres: \"Laan 4, 4000DD Den Haag\",\n    werkuren: { start: \"08:00\", eind: \"17:00\" },\n    maxJobsPerWeek: 20,\n    maxUrenPerWeek: 40,\n    calendarId: \"CALENDAR_ID_MONTEUR_4\"\n  }\n];\n\n// Input data van webhook\nconst input = $input.first().json;\n\nreturn [{\n  json: {\n    ...input,\n    monteurs: monteurs,\n    config: {\n      scoreThreshold: 80,\n      maxReistijdMinuten: 60,\n      werkurenStart: \"08:00\",\n      werkurenEind: \"17:00\"\n    }\n  }\n}];"
+      },
+      "id": "code-config",
+      "name": "Laad Monteur Config",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [470, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://api.hubapi.com/crm/v3/objects/deals/{{ $json.dealId }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "hubspotApi",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "properties",
+              "value": "dealname,amount,dealstage,installatie_duur,closedate"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "hubspot-get-deal",
+      "name": "HubSpot - Haal Deal",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [690, 300],
+      "credentials": {
+        "hubspotApi": {
+          "id": "HUBSPOT_CREDENTIAL_ID",
+          "name": "HubSpot API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Combineer deal data met eerder data\nconst prevData = $('Laad Monteur Config').first().json;\nconst dealResponse = $input.first().json;\n\nconst installatieDuur = parseInt(dealResponse.properties?.installatie_duur) || 180; // default 3 uur\n\nreturn [{\n  json: {\n    ...prevData,\n    deal: dealResponse,\n    installatieDuurMinuten: installatieDuur\n  }\n}];"
+      },
+      "id": "code-merge-deal",
+      "name": "Merge Deal Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [910, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Verwerk alle voorkeuren en monteurs om beschikbaarheid te checken\n// Dit is een vereenvoudigde versie - in productie gebruik je echte Calendar API calls\n\nconst data = $input.first().json;\nconst { preferences, monteurs, customerAddress, installatieDuurMinuten, config } = data;\n\n// Helper functie om tijd te parsen\nfunction parseTime(timeStr) {\n  const [hours, minutes] = timeStr.split(':').map(Number);\n  return hours * 60 + minutes;\n}\n\n// Helper functie om te checken of tijd binnen werkuren valt\nfunction isWithinWorkHours(startTime, durationMinutes, werkuren) {\n  const startMinutes = parseTime(startTime);\n  const endMinutes = startMinutes + durationMinutes;\n  const werkStart = parseTime(werkuren.start);\n  const werkEind = parseTime(werkuren.eind);\n  \n  return startMinutes >= werkStart && endMinutes <= werkEind;\n}\n\n// Bereken score voor elke combinatie van voorkeur + monteur\nconst scoredOptions = [];\n\nfor (const preference of preferences) {\n  for (const monteur of monteurs) {\n    // Check werkuren\n    if (!isWithinWorkHours(preference.timeSlot, installatieDuurMinuten, monteur.werkuren)) {\n      continue;\n    }\n    \n    // Simuleer beschikbaarheid (in productie: check calendar API)\n    const isAvailable = Math.random() > 0.3; // 70% kans beschikbaar\n    \n    if (!isAvailable) continue;\n    \n    // Simuleer reistijd (in productie: Google Maps API)\n    const reistijdMinuten = Math.floor(Math.random() * 60) + 15; // 15-75 min\n    \n    // Simuleer huidige werklast\n    const weekJobs = Math.floor(Math.random() * 15); // 0-15 jobs\n    const weekHours = Math.floor(Math.random() * 30); // 0-30 uur\n    \n    // Bereken score\n    const score = {\n      beschikbaar: 100,\n      reistijd: Math.max(0, 50 - (reistijdMinuten / 2)),\n      werklast_jobs: Math.max(0, 30 - (weekJobs * 2)),\n      werklast_uren: Math.max(0, 20 - (weekHours / 2))\n    };\n    \n    const totalScore = score.beschikbaar + score.reistijd + score.werklast_jobs + score.werklast_uren;\n    \n    scoredOptions.push({\n      preference,\n      monteur,\n      reistijdMinuten,\n      weekJobs,\n      weekHours,\n      score: totalScore,\n      scoreBreakdown: score\n    });\n  }\n}\n\n// Sorteer op score (hoogste eerst)\nscoredOptions.sort((a, b) => b.score - a.score);\n\n// Bepaal beste optie\nconst besteOptie = scoredOptions.length > 0 && scoredOptions[0].score >= config.scoreThreshold\n  ? scoredOptions[0]\n  : null;\n\n// Bepaal alternatieven (top 3 als geen directe match)\nconst alternatieven = besteOptie === null && scoredOptions.length > 0\n  ? scoredOptions.slice(0, 3)\n  : [];\n\nreturn [{\n  json: {\n    ...data,\n    scoredOptions,\n    besteOptie,\n    alternatieven,\n    hasMatch: besteOptie !== null,\n    hasAlternatives: alternatieven.length > 0\n  }\n}];"
+      },
+      "id": "code-scoring",
+      "name": "Scoring Algoritme",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1130, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "match-found",
+              "leftValue": "={{ $json.hasMatch }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-match",
+      "name": "Match Gevonden?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1350, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.microsoft.com/v1.0/users/planning@hollandelectric.nl/calendars/{{ $json.besteOptie.monteur.calendarId }}/events",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "microsoftOutlookOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"subject\": \"Installatie - {{ $json.deal.properties.dealname }}\",\n  \"body\": {\n    \"contentType\": \"HTML\",\n    \"content\": \"<p>Deal ID: {{ $json.dealId }}</p><p>Klant: {{ $json.contactEmail }}</p><p>Duur: {{ $json.installatieDuurMinuten }} minuten</p>\"\n  },\n  \"start\": {\n    \"dateTime\": \"{{ $json.besteOptie.preference.date }}T{{ $json.besteOptie.preference.timeSlot }}:00\",\n    \"timeZone\": \"Europe/Amsterdam\"\n  },\n  \"end\": {\n    \"dateTime\": \"{{ $json.besteOptie.preference.date }}T{{ String(parseInt($json.besteOptie.preference.timeSlot.split(':')[0]) + Math.floor($json.installatieDuurMinuten/60)).padStart(2,'0') }}:{{ String(parseInt($json.besteOptie.preference.timeSlot.split(':')[1]) + ($json.installatieDuurMinuten % 60)).padStart(2,'0') }}:00\",\n    \"timeZone\": \"Europe/Amsterdam\"\n  },\n  \"location\": {\n    \"displayName\": \"{{ $json.customerAddress }}\"\n  },\n  \"attendees\": [],\n  \"allowNewTimeProposals\": false\n}",
+        "options": {}
+      },
+      "id": "graph-create-event",
+      "name": "Calendar - Boek Afspraak",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1600, 200],
+      "credentials": {
+        "microsoftOutlookOAuth2Api": {
+          "id": "MICROSOFT_CREDENTIAL_ID",
+          "name": "Microsoft Outlook OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://api.hubapi.com/crm/v3/objects/deals/{{ $('Laad Monteur Config').first().json.dealId }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "hubspotApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"properties\": {\n    \"dealstage\": \"INGEPLAND_STAGE_ID\",\n    \"geplande_datum\": \"{{ $('Scoring Algoritme').first().json.besteOptie.preference.date }}\",\n    \"toegewezen_monteur\": \"{{ $('Scoring Algoritme').first().json.besteOptie.monteur.naam }}\"\n  }\n}",
+        "options": {}
+      },
+      "id": "hubspot-update-success",
+      "name": "HubSpot - Update Deal (Succes)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1850, 200],
+      "credentials": {
+        "hubspotApi": {
+          "id": "HUBSPOT_CREDENTIAL_ID",
+          "name": "HubSpot API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"success\": true,\n  \"booking\": {\n    \"date\": \"{{ $('Scoring Algoritme').first().json.besteOptie.preference.date }}\",\n    \"time\": \"{{ $('Scoring Algoritme').first().json.besteOptie.preference.timeSlot }}\",\n    \"monteur\": \"{{ $('Scoring Algoritme').first().json.besteOptie.monteur.naam }}\",\n    \"endTime\": \"{{ String(parseInt($('Scoring Algoritme').first().json.besteOptie.preference.timeSlot.split(':')[0]) + Math.floor($('Scoring Algoritme').first().json.installatieDuurMinuten/60)).padStart(2,'0') }}:{{ String(parseInt($('Scoring Algoritme').first().json.besteOptie.preference.timeSlot.split(':')[1]) + ($('Scoring Algoritme').first().json.installatieDuurMinuten % 60)).padStart(2,'0') }}\"\n  }\n}",
+        "options": {}
+      },
+      "id": "respond-success",
+      "name": "Response - Succes",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [2100, 200]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "has-alternatives",
+              "leftValue": "={{ $json.hasAlternatives }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-alternatives",
+      "name": "Alternatieven?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1600, 400]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"success\": false,\n  \"hasAlternatives\": true,\n  \"alternatives\": {{ JSON.stringify($json.alternatieven.map(a => ({\n    date: a.preference.date,\n    time: a.preference.timeSlot,\n    monteur: a.monteur.naam,\n    monteurId: a.monteur.id\n  }))) }}\n}",
+        "options": {}
+      },
+      "id": "respond-alternatives",
+      "name": "Response - Alternatieven",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1850, 350]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "YOUR_SLACK_WEBHOOK_URL",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"text\": \"Handmatige planning nodig\",\n  \"blocks\": [\n    {\n      \"type\": \"header\",\n      \"text\": {\n        \"type\": \"plain_text\",\n        \"text\": \"Handmatige Planning Nodig\"\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"fields\": [\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*Deal:*\\n{{ $('Scoring Algoritme').first().json.deal.properties.dealname }}\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*Klant:*\\n{{ $('Scoring Algoritme').first().json.contactEmail }}\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*Adres:*\\n{{ $('Scoring Algoritme').first().json.customerAddress }}\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*Reden:*\\nGeen beschikbare monteurs gevonden\"\n        }\n      ]\n    }\n  ]\n}",
+        "options": {}
+      },
+      "id": "slack-notify",
+      "name": "Slack - Notify Backoffice",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1850, 500]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://api.hubapi.com/crm/v3/objects/deals/{{ $('Laad Monteur Config').first().json.dealId }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "hubspotApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"properties\": {\n    \"dealstage\": \"HANDMATIG_PLANNEN_STAGE_ID\"\n  }\n}",
+        "options": {}
+      },
+      "id": "hubspot-update-manual",
+      "name": "HubSpot - Update Deal (Handmatig)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2100, 500],
+      "credentials": {
+        "hubspotApi": {
+          "id": "HUBSPOT_CREDENTIAL_ID",
+          "name": "HubSpot API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"success\": false,\n  \"hasAlternatives\": false,\n  \"message\": \"Wij nemen contact met u op om een afspraak te maken.\"\n}",
+        "options": {}
+      },
+      "id": "respond-manual",
+      "name": "Response - Handmatig",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [2350, 500]
+    }
+  ],
+  "connections": {
+    "Webhook - Ontvang Aanvraag": {
+      "main": [
+        [
+          {
+            "node": "Laad Monteur Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Laad Monteur Config": {
+      "main": [
+        [
+          {
+            "node": "HubSpot - Haal Deal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HubSpot - Haal Deal": {
+      "main": [
+        [
+          {
+            "node": "Merge Deal Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Deal Data": {
+      "main": [
+        [
+          {
+            "node": "Scoring Algoritme",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Scoring Algoritme": {
+      "main": [
+        [
+          {
+            "node": "Match Gevonden?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Match Gevonden?": {
+      "main": [
+        [
+          {
+            "node": "Calendar - Boek Afspraak",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Alternatieven?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calendar - Boek Afspraak": {
+      "main": [
+        [
+          {
+            "node": "HubSpot - Update Deal (Succes)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HubSpot - Update Deal (Succes)": {
+      "main": [
+        [
+          {
+            "node": "Response - Succes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Alternatieven?": {
+      "main": [
+        [
+          {
+            "node": "Response - Alternatieven",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Slack - Notify Backoffice",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Slack - Notify Backoffice": {
+      "main": [
+        [
+          {
+            "node": "HubSpot - Update Deal (Handmatig)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HubSpot - Update Deal (Handmatig)": {
+      "main": [
+        [
+          {
+            "node": "Response - Handmatig",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 1,
+  "pinData": {}
+}

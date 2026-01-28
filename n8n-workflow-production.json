@@ -1,0 +1,392 @@
+{
+  "name": "Holland Electric - Afspraak Planner (Production)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "schedule-appointment",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook - Ontvang Aanvraag",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [250, 300],
+      "webhookId": "schedule-appointment",
+      "notes": "Verwacht JSON body:\n{\n  \"dealId\": \"12345\",\n  \"contactEmail\": \"klant@email.nl\",\n  \"customerAddress\": \"Straat 1, 1234AB Stad\",\n  \"preferences\": [\n    { \"date\": \"2025-02-03\", \"timeSlot\": \"09:00\" },\n    { \"date\": \"2025-02-04\", \"timeSlot\": \"14:00\" }\n  ]\n}"
+    },
+    {
+      "parameters": {
+        "jsCode": "// =====================================================\n// MONTEUR CONFIGURATIE - VEREIST: Vul echte data in!\n// =====================================================\n\nconst MONTEURS = [\n  {\n    id: \"monteur1\",\n    email: \"planning@hollandelectric.nl\", // Shared mailbox\n    naam: \"Jan Jansen\",\n    thuisAdres: \"Straat 1, 1234AB Amsterdam\", // VEREIST voor reistijd\n    werkuren: { start: \"08:00\", eind: \"17:00\" },\n    maxJobsPerWeek: 20,\n    maxUrenPerWeek: 40,\n    // Calendar ID uit Microsoft Graph - vind deze via:\n    // GET https://graph.microsoft.com/v1.0/users/planning@hollandelectric.nl/calendars\n    calendarId: \"AAMkAG...\" // VEREIST: Plak echte calendar ID\n  },\n  {\n    id: \"monteur2\",\n    email: \"planning@hollandelectric.nl\",\n    naam: \"Piet Pieters\",\n    thuisAdres: \"Straat 2, 2345CD Rotterdam\",\n    werkuren: { start: \"08:00\", eind: \"17:00\" },\n    maxJobsPerWeek: 20,\n    maxUrenPerWeek: 40,\n    calendarId: \"AAMkAH...\" // VEREIST\n  },\n  {\n    id: \"monteur3\",\n    email: \"planning@hollandelectric.nl\",\n    naam: \"KlaasAnsen\",\n    thuisAdres: \"Straat 3, 3456EF Utrecht\",\n    werkuren: { start: \"08:00\", eind: \"17:00\" },\n    maxJobsPerWeek: 20,\n    maxUrenPerWeek: 40,\n    calendarId: \"AAMkAI...\" // VEREIST\n  },\n  {\n    id: \"monteur4\",\n    email: \"planning@hollandelectric.nl\",\n    naam: \"Henk de Vries\",\n    thuisAdres: \"Straat 4, 4567GH Den Haag\",\n    werkuren: { start: \"08:00\", eind: \"17:00\" },\n    maxJobsPerWeek: 20,\n    maxUrenPerWeek: 40,\n    calendarId: \"AAMkAJ...\" // VEREIST\n  }\n];\n\n// Configuratie parameters\nconst CONFIG = {\n  scoreThreshold: 80,           // Minimum score voor auto-booking\n  maxReistijdMinuten: 60,       // Max reistijd in minuten\n  werkurenStart: \"08:00\",\n  werkurenEind: \"17:00\",\n  defaultInstallatieDuur: 180,  // 3 uur default\n  bufferMinuten: 30             // Buffer tussen afspraken\n};\n\n// Input data van webhook\nconst input = $input.first().json;\n\n// Valideer input\nif (!input.dealId) throw new Error('dealId is vereist');\nif (!input.preferences || !input.preferences.length) throw new Error('preferences zijn vereist');\nif (!input.customerAddress) throw new Error('customerAddress is vereist');\n\nreturn [{\n  json: {\n    dealId: input.dealId,\n    contactEmail: input.contactEmail,\n    customerAddress: input.customerAddress,\n    preferences: input.preferences,\n    monteurs: MONTEURS,\n    config: CONFIG\n  }\n}];"
+      },
+      "id": "code-config",
+      "name": "Config + Validatie",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [470, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://api.hubapi.com/crm/v3/objects/deals/{{ $json.dealId }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "hubspotApi",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "properties",
+              "value": "dealname,amount,dealstage,installatie_duur,closedate"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "hubspot-get-deal",
+      "name": "HubSpot - Get Deal",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [690, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Bereid data voor calendar API calls\nconst prevData = $('Config + Validatie').first().json;\nconst dealResponse = $input.first().json;\n\nconst installatieDuur = parseInt(dealResponse.properties?.installatie_duur) || prevData.config.defaultInstallatieDuur;\n\n// Bepaal datum range voor calendar query\n// We nemen de eerste en laatste voorkeur datum\nconst dates = prevData.preferences.map(p => p.date).sort();\nconst startDate = dates[0];\nconst endDate = dates[dates.length - 1];\n\n// Voeg 1 dag toe aan endDate voor de query\nconst endDatePlusOne = new Date(endDate);\nendDatePlusOne.setDate(endDatePlusOne.getDate() + 1);\nconst endDateStr = endDatePlusOne.toISOString().split('T')[0];\n\nreturn [{\n  json: {\n    ...prevData,\n    deal: {\n      id: dealResponse.id,\n      name: dealResponse.properties?.dealname,\n      amount: dealResponse.properties?.amount,\n      stage: dealResponse.properties?.dealstage\n    },\n    installatieDuurMinuten: installatieDuur,\n    calendarQueryStart: `${startDate}T00:00:00`,\n    calendarQueryEnd: `${endDateStr}T23:59:59`,\n    // Maak een item per monteur voor de SplitInBatches\n    monteursToCheck: prevData.monteurs.map(m => ({\n      ...m,\n      queryStart: `${startDate}T00:00:00`,\n      queryEnd: `${endDateStr}T23:59:59`\n    }))\n  }\n}];"
+      },
+      "id": "code-prep-calendar",
+      "name": "Bereid Calendar Queries",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [910, 300]
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "split-monteurs",
+      "name": "Loop Monteurs",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [1130, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://graph.microsoft.com/v1.0/users/planning@hollandelectric.nl/calendars/{{ $json.monteursToCheck[0].calendarId }}/calendarView",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "microsoftOutlookOAuth2Api",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "startDateTime",
+              "value": "={{ $json.calendarQueryStart }}"
+            },
+            {
+              "name": "endDateTime",
+              "value": "={{ $json.calendarQueryEnd }}"
+            },
+            {
+              "name": "$select",
+              "value": "subject,start,end,location"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "graph-get-calendar",
+      "name": "Microsoft Graph - Get Calendar Events",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1350, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Verzamel alle calendar events van alle monteurs\nconst allResults = $('Microsoft Graph - Get Calendar Events').all();\nconst baseData = $('Bereid Calendar Queries').first().json;\n\n// Map calendar events per monteur\nconst calendarEventsPerMonteur = {};\n\nbaseData.monteurs.forEach((monteur, index) => {\n  const calendarResponse = allResults[index]?.json;\n  calendarEventsPerMonteur[monteur.id] = calendarResponse?.value || [];\n});\n\nreturn [{\n  json: {\n    ...baseData,\n    calendarEventsPerMonteur\n  }\n}];"
+      },
+      "id": "code-merge-calendars",
+      "name": "Merge Calendar Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1570, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://maps.googleapis.com/maps/api/distancematrix/json",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleApi",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "origins",
+              "value": "={{ $json.monteurs.map(m => m.thuisAdres).join('|') }}"
+            },
+            {
+              "name": "destinations",
+              "value": "={{ $json.customerAddress }}"
+            },
+            {
+              "name": "mode",
+              "value": "driving"
+            },
+            {
+              "name": "key",
+              "value": "YOUR_GOOGLE_MAPS_API_KEY"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "google-maps-distance",
+      "name": "Google Maps - Reistijden",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1790, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// =====================================================\n// SCORING ALGORITME\n// Berekent de beste monteur voor elke voorkeur\n// =====================================================\n\nconst baseData = $('Merge Calendar Data').first().json;\nconst distanceResponse = $input.first().json;\n\nconst { preferences, monteurs, calendarEventsPerMonteur, installatieDuurMinuten, config, customerAddress, deal } = baseData;\n\n// Parse reistijden van Google Maps\nconst reistijdenPerMonteur = {};\nif (distanceResponse.rows) {\n  distanceResponse.rows.forEach((row, index) => {\n    const monteur = monteurs[index];\n    const element = row.elements[0];\n    reistijdenPerMonteur[monteur.id] = element.status === 'OK' \n      ? Math.round(element.duration.value / 60) // seconden naar minuten\n      : 999; // Als geen route, zeer hoge waarde\n  });\n}\n\n// Helper: Check of tijdslot beschikbaar is\nfunction isSlotAvailable(monteurId, date, startTime, durationMinutes) {\n  const events = calendarEventsPerMonteur[monteurId] || [];\n  \n  const slotStart = new Date(`${date}T${startTime}:00`);\n  const slotEnd = new Date(slotStart.getTime() + durationMinutes * 60000);\n  \n  for (const event of events) {\n    const eventStart = new Date(event.start.dateTime);\n    const eventEnd = new Date(event.end.dateTime);\n    \n    // Check overlap\n    if (slotStart < eventEnd && slotEnd > eventStart) {\n      return false;\n    }\n  }\n  return true;\n}\n\n// Helper: Check werkuren\nfunction isWithinWorkHours(startTime, durationMinutes, werkuren) {\n  const [startH, startM] = startTime.split(':').map(Number);\n  const startMinutes = startH * 60 + startM;\n  const endMinutes = startMinutes + durationMinutes;\n  \n  const [werkStartH, werkStartM] = werkuren.start.split(':').map(Number);\n  const [werkEndH, werkEndM] = werkuren.eind.split(':').map(Number);\n  const werkStart = werkStartH * 60 + werkStartM;\n  const werkEnd = werkEndH * 60 + werkEndM;\n  \n  return startMinutes >= werkStart && endMinutes <= werkEnd;\n}\n\n// Helper: Tel huidige week jobs/uren voor monteur\nfunction getWorkload(monteurId) {\n  const events = calendarEventsPerMonteur[monteurId] || [];\n  const now = new Date();\n  const weekStart = new Date(now);\n  weekStart.setDate(now.getDate() - now.getDay() + 1); // Maandag\n  const weekEnd = new Date(weekStart);\n  weekEnd.setDate(weekStart.getDate() + 6);\n  \n  let jobs = 0;\n  let minutes = 0;\n  \n  events.forEach(event => {\n    const eventDate = new Date(event.start.dateTime);\n    if (eventDate >= weekStart && eventDate <= weekEnd) {\n      jobs++;\n      const duration = (new Date(event.end.dateTime) - new Date(event.start.dateTime)) / 60000;\n      minutes += duration;\n    }\n  });\n  \n  return { jobs, hours: minutes / 60 };\n}\n\n// Score alle combinaties\nconst scoredOptions = [];\n\nfor (const preference of preferences) {\n  for (const monteur of monteurs) {\n    // Check werkuren\n    if (!isWithinWorkHours(preference.timeSlot, installatieDuurMinuten + config.bufferMinuten, monteur.werkuren)) {\n      continue;\n    }\n    \n    // Check beschikbaarheid\n    if (!isSlotAvailable(monteur.id, preference.date, preference.timeSlot, installatieDuurMinuten + config.bufferMinuten)) {\n      continue;\n    }\n    \n    // Haal reistijd op\n    const reistijdMinuten = reistijdenPerMonteur[monteur.id] || 60;\n    \n    // Check max reistijd\n    if (reistijdMinuten > config.maxReistijdMinuten) {\n      continue;\n    }\n    \n    // Haal werklast op\n    const workload = getWorkload(monteur.id);\n    \n    // Check max werklast\n    if (workload.jobs >= monteur.maxJobsPerWeek || workload.hours >= monteur.maxUrenPerWeek) {\n      continue;\n    }\n    \n    // Bereken score\n    const scoreBreakdown = {\n      beschikbaar: 100, // Basis score voor beschikbaarheid\n      reistijd: Math.max(0, 50 - (reistijdMinuten / 2)), // 0-50 punten, minder reistijd = meer punten\n      werklast_jobs: Math.max(0, 30 - (workload.jobs * 2)), // 0-30 punten\n      werklast_uren: Math.max(0, 20 - (workload.hours / 2)) // 0-20 punten\n    };\n    \n    const totalScore = Object.values(scoreBreakdown).reduce((a, b) => a + b, 0);\n    \n    scoredOptions.push({\n      preference,\n      monteur: {\n        id: monteur.id,\n        naam: monteur.naam,\n        email: monteur.email,\n        calendarId: monteur.calendarId\n      },\n      reistijdMinuten,\n      workload,\n      score: totalScore,\n      scoreBreakdown\n    });\n  }\n}\n\n// Sorteer op score (hoogste eerst)\nscoredOptions.sort((a, b) => b.score - a.score);\n\n// Bepaal beste optie (boven threshold)\nconst besteOptie = scoredOptions.length > 0 && scoredOptions[0].score >= config.scoreThreshold\n  ? scoredOptions[0]\n  : null;\n\n// Bepaal alternatieven (als geen directe match)\nconst alternatieven = besteOptie === null && scoredOptions.length > 0\n  ? scoredOptions.slice(0, 3)\n  : [];\n\nreturn [{\n  json: {\n    dealId: baseData.dealId,\n    contactEmail: baseData.contactEmail,\n    customerAddress,\n    deal,\n    installatieDuurMinuten,\n    config,\n    scoredOptions,\n    besteOptie,\n    alternatieven,\n    hasMatch: besteOptie !== null,\n    hasAlternatives: alternatieven.length > 0,\n    totalOptionsChecked: preferences.length * monteurs.length,\n    availableOptions: scoredOptions.length\n  }\n}];"
+      },
+      "id": "code-scoring",
+      "name": "Scoring Algoritme",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2010, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "match-found",
+              "leftValue": "={{ $json.hasMatch }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-match",
+      "name": "Match Gevonden?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [2230, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Bereid calendar event body voor\nconst data = $input.first().json;\nconst { besteOptie, customerAddress, deal, installatieDuurMinuten, contactEmail } = data;\n\n// Bereken eindtijd\nconst [startH, startM] = besteOptie.preference.timeSlot.split(':').map(Number);\nconst totalMinutes = startH * 60 + startM + installatieDuurMinuten;\nconst endH = Math.floor(totalMinutes / 60);\nconst endM = totalMinutes % 60;\nconst endTime = `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;\n\nreturn [{\n  json: {\n    ...data,\n    calendarEvent: {\n      subject: `Installatie - ${deal.name}`,\n      body: {\n        contentType: \"HTML\",\n        content: `<p><strong>Deal:</strong> ${deal.name}</p><p><strong>Klant:</strong> ${contactEmail}</p><p><strong>Adres:</strong> ${customerAddress}</p><p><strong>Duur:</strong> ${installatieDuurMinuten} minuten</p>`\n      },\n      start: {\n        dateTime: `${besteOptie.preference.date}T${besteOptie.preference.timeSlot}:00`,\n        timeZone: \"Europe/Amsterdam\"\n      },\n      end: {\n        dateTime: `${besteOptie.preference.date}T${endTime}:00`,\n        timeZone: \"Europe/Amsterdam\"\n      },\n      location: {\n        displayName: customerAddress\n      },\n      allowNewTimeProposals: false\n    },\n    endTime\n  }\n}];"
+      },
+      "id": "code-prep-event",
+      "name": "Bereid Calendar Event",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2450, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.microsoft.com/v1.0/users/planning@hollandelectric.nl/calendars/{{ $json.besteOptie.monteur.calendarId }}/events",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "microsoftOutlookOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.calendarEvent) }}",
+        "options": {}
+      },
+      "id": "graph-create-event",
+      "name": "Graph - Boek Afspraak",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2670, 200]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://api.hubapi.com/crm/v3/objects/deals/{{ $('Scoring Algoritme').first().json.dealId }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "hubspotApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"properties\": {\n    \"dealstage\": \"INGEPLAND_STAGE_ID\",\n    \"geplande_datum\": \"{{ $('Scoring Algoritme').first().json.besteOptie.preference.date }}\",\n    \"toegewezen_monteur\": \"{{ $('Scoring Algoritme').first().json.besteOptie.monteur.naam }}\"\n  }\n}",
+        "options": {}
+      },
+      "id": "hubspot-update-success",
+      "name": "HubSpot - Update (Succes)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2890, 200]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"success\": true,\n  \"booking\": {\n    \"date\": \"{{ $('Scoring Algoritme').first().json.besteOptie.preference.date }}\",\n    \"time\": \"{{ $('Scoring Algoritme').first().json.besteOptie.preference.timeSlot }}\",\n    \"endTime\": \"{{ $('Bereid Calendar Event').first().json.endTime }}\",\n    \"monteur\": \"{{ $('Scoring Algoritme').first().json.besteOptie.monteur.naam }}\",\n    \"reistijd\": {{ $('Scoring Algoritme').first().json.besteOptie.reistijdMinuten }}\n  }\n}",
+        "options": {}
+      },
+      "id": "respond-success",
+      "name": "Response - Succes",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [3110, 200]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "has-alternatives",
+              "leftValue": "={{ $json.hasAlternatives }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-alternatives",
+      "name": "Alternatieven?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [2450, 400]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"success\": false,\n  \"hasAlternatives\": true,\n  \"message\": \"Uw voorkeuren zijn niet beschikbaar. Kies een alternatief:\",\n  \"alternatives\": {{ JSON.stringify($json.alternatieven.map(a => ({\n    date: a.preference.date,\n    time: a.preference.timeSlot,\n    monteur: a.monteur.naam,\n    monteurId: a.monteur.id,\n    calendarId: a.monteur.calendarId,\n    reistijd: a.reistijdMinuten,\n    score: a.score\n  }))) }}\n}",
+        "options": {}
+      },
+      "id": "respond-alternatives",
+      "name": "Response - Alternatieven",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [2670, 350]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "YOUR_SLACK_WEBHOOK_URL",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"blocks\": [\n    {\n      \"type\": \"header\",\n      \"text\": {\n        \"type\": \"plain_text\",\n        \"text\": \"Handmatige Planning Nodig\",\n        \"emoji\": true\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"fields\": [\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*Deal:*\\n{{ $json.deal.name }}\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*Deal ID:*\\n{{ $json.dealId }}\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*Klant:*\\n{{ $json.contactEmail }}\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*Adres:*\\n{{ $json.customerAddress }}\"\n        }\n      ]\n    },\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"*Reden:* Geen beschikbare monteurs gevonden voor de opgegeven voorkeuren.\\n*Opties gecontroleerd:* {{ $json.totalOptionsChecked }}\\n*Beschikbare opties:* {{ $json.availableOptions }}\"\n      }\n    },\n    {\n      \"type\": \"divider\"\n    },\n    {\n      \"type\": \"actions\",\n      \"elements\": [\n        {\n          \"type\": \"button\",\n          \"text\": {\n            \"type\": \"plain_text\",\n            \"text\": \"Open in HubSpot\"\n          },\n          \"url\": \"https://app.hubspot.com/contacts/YOUR_PORTAL_ID/deal/{{ $json.dealId }}\"\n        }\n      ]\n    }\n  ]\n}",
+        "options": {}
+      },
+      "id": "slack-notify",
+      "name": "Slack - Notify",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2670, 500]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://api.hubapi.com/crm/v3/objects/deals/{{ $json.dealId }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "hubspotApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"properties\": {\n    \"dealstage\": \"HANDMATIG_PLANNEN_STAGE_ID\"\n  }\n}",
+        "options": {}
+      },
+      "id": "hubspot-update-manual",
+      "name": "HubSpot - Update (Handmatig)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2890, 500]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"success\": false,\n  \"hasAlternatives\": false,\n  \"message\": \"Wij nemen contact met u op om een afspraak te maken.\"\n}",
+        "options": {}
+      },
+      "id": "respond-manual",
+      "name": "Response - Handmatig",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [3110, 500]
+    }
+  ],
+  "connections": {
+    "Webhook - Ontvang Aanvraag": {
+      "main": [[{ "node": "Config + Validatie", "type": "main", "index": 0 }]]
+    },
+    "Config + Validatie": {
+      "main": [[{ "node": "HubSpot - Get Deal", "type": "main", "index": 0 }]]
+    },
+    "HubSpot - Get Deal": {
+      "main": [[{ "node": "Bereid Calendar Queries", "type": "main", "index": 0 }]]
+    },
+    "Bereid Calendar Queries": {
+      "main": [[{ "node": "Loop Monteurs", "type": "main", "index": 0 }]]
+    },
+    "Loop Monteurs": {
+      "main": [
+        [{ "node": "Microsoft Graph - Get Calendar Events", "type": "main", "index": 0 }],
+        [{ "node": "Merge Calendar Data", "type": "main", "index": 0 }]
+      ]
+    },
+    "Microsoft Graph - Get Calendar Events": {
+      "main": [[{ "node": "Loop Monteurs", "type": "main", "index": 0 }]]
+    },
+    "Merge Calendar Data": {
+      "main": [[{ "node": "Google Maps - Reistijden", "type": "main", "index": 0 }]]
+    },
+    "Google Maps - Reistijden": {
+      "main": [[{ "node": "Scoring Algoritme", "type": "main", "index": 0 }]]
+    },
+    "Scoring Algoritme": {
+      "main": [[{ "node": "Match Gevonden?", "type": "main", "index": 0 }]]
+    },
+    "Match Gevonden?": {
+      "main": [
+        [{ "node": "Bereid Calendar Event", "type": "main", "index": 0 }],
+        [{ "node": "Alternatieven?", "type": "main", "index": 0 }]
+      ]
+    },
+    "Bereid Calendar Event": {
+      "main": [[{ "node": "Graph - Boek Afspraak", "type": "main", "index": 0 }]]
+    },
+    "Graph - Boek Afspraak": {
+      "main": [[{ "node": "HubSpot - Update (Succes)", "type": "main", "index": 0 }]]
+    },
+    "HubSpot - Update (Succes)": {
+      "main": [[{ "node": "Response - Succes", "type": "main", "index": 0 }]]
+    },
+    "Alternatieven?": {
+      "main": [
+        [{ "node": "Response - Alternatieven", "type": "main", "index": 0 }],
+        [{ "node": "Slack - Notify", "type": "main", "index": 0 }]
+      ]
+    },
+    "Slack - Notify": {
+      "main": [[{ "node": "HubSpot - Update (Handmatig)", "type": "main", "index": 0 }]]
+    },
+    "HubSpot - Update (Handmatig)": {
+      "main": [[{ "node": "Response - Handmatig", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

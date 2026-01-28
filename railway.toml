@@ -1,0 +1,10 @@
+[build]
+builder = "nixpacks"
+
+[deploy]
+startCommand = "npm run build && npm start"
+healthcheckPath = "/"
+healthcheckTimeout = 300
+
+[env]
+PORT = "3000" 
